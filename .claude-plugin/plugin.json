@@ -11,6 +11,12 @@
       "description": "nerd: Nerd Font microphone (needs a Nerd Font in the terminal). emoji: the 🎤 emoji.",
       "options": ["nerd", "emoji"],
       "default": "nerd"
+    },
+    "beside": {
+      "type": "boolean",
+      "title": "Share the row with another band plugin",
+      "description": "On when another plugin (e.g. AFKSwitch) draws a 3-row card in the band above Dictate's: the two sit side by side instead of stacking. Leave off otherwise.",
+      "default": false
     }
   }
 }

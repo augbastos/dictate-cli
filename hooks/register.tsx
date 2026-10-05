@@ -158,35 +158,57 @@ export const register: Register = (on, options) => {
     return { ...edited, text: prefix + edited.text, cursor: prefix.length + edited.cursor }
   })
 
-  // The controls sit at the right end of the band right above the prompt row (no
-  // site draws inside the prompt row), bottom-aligned, so they touch the prompt.
-  // Whatever other plugins draw in the band stays, to the left.
+  // A bordered card at the right of the band right above the prompt (no site draws
+  // inside the prompt row), as present as AFKSwitch's switch. Whatever other plugins
+  // draw in the band stays, to the left.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     isWorking = e.props.isWorking
     if (e.props.hasSurvey || (e.surface !== 'terminal' && e.surface !== 'desktop')) return next(e)
     const { Box, Text, Button } = $.ui.resolve(e)
-    const isLive = phase === 'recording' || phase === 'transcribing'
     const icon = ICONS[options.icon === 'emoji' ? 'emoji' : 'nerd']
     const others = await next(e)
+    const toggle = () => void (phase === 'recording' ? stop($) : start($))
 
+    const card = (
+      <Box
+        flexDirection="row"
+        flexShrink={0}
+        borderStyle="round"
+        borderColor={phase === 'recording' || phase === 'error' ? 'red' : undefined}
+        borderDimColor={phase === 'idle'}
+        paddingX={1}
+      >
+        {phase === 'idle' && <Button key="mic" label={`${icon.mic}  Dictate`} plain onPress={toggle} />}
+        {phase === 'recording' && <Text color="red">● {elapsed(Date.now())}   </Text>}
+        {phase === 'recording' && <Button key="cancel" label={`${icon.cancel} Cancel`} plain dimColor onPress={() => void cancel($)} />}
+        {phase === 'recording' && <Text>   </Text>}
+        {phase === 'recording' && <Button key="mic" label={`${icon.mic}  Send`} plain onPress={toggle} />}
+        {phase === 'transcribing' && <Text dimColor>{icon.mic}  Transcribing…   </Text>}
+        {phase === 'transcribing' && <Button key="cancel" label={`${icon.cancel} Cancel`} plain dimColor onPress={() => void cancel($)} />}
+        {phase === 'error' && <Text color="red">{message}   </Text>}
+        {phase === 'error' && <Button key="mic" label={`${icon.mic}  Dictate`} plain onPress={toggle} />}
+      </Box>
+    )
+
+    // Another plugin's tree beneath us (e.g. AFKSwitch drawn below Dictate): one row.
+    const isBottom = others === null || others === undefined || (others as { type?: unknown }).type === 'engine'
+    if (!isBottom) {
+      return (
+        <Box flexDirection="row" alignItems="flex-end">
+          {others}
+          <Box flexGrow={1} />
+          {card}
+        </Box>
+      )
+    }
+    // We are the bottom of the chain. With `beside`, a plugin drawn above us in the
+    // band (AFKSwitch) shares our rows instead of stacking under the card.
+    // No width or margin on any Box around `others`: the engine refuses its node there.
     return (
-      // No width on any Box around `others`: the engine refuses its own node under one.
-      <Box flexDirection="row" alignItems="flex-end">
+      <Box flexDirection="column">
         {others}
-        <Box flexGrow={1} />
-        <Box flexDirection="row" flexShrink={0}>
-          {phase === 'recording' && <Text color="red">● {elapsed(Date.now())}  </Text>}
-          {phase === 'transcribing' && <Text dimColor>transcribing…  </Text>}
-          {phase === 'error' && <Text color="red">{message}  </Text>}
-          {isLive && <Button key="cancel" label={icon.cancel} plain onPress={() => void cancel($)} />}
-          {isLive && <Text>  </Text>}
-          <Button
-            key="mic"
-            label={icon.mic}
-            plain
-            dimColor={phase !== 'recording'}
-            onPress={() => void (phase === 'recording' ? stop($) : start($))}
-          />
+        <Box flexDirection="row" justifyContent="flex-end" marginBottom={options.beside === true ? -3 : 0}>
+          {card}
         </Box>
       </Box>
     )

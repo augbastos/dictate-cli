@@ -78,6 +78,7 @@ describe('dictate', () => {
     expect(state.isRecording).toBe(true)
     expect(await ui.find({ key: 'cancel' })).toBeDefined()
     expect(await ui.find({ text: /● 0:0/ })).toBeDefined()
+    expect(await ui.find({ text: /Send/ })).toBeDefined()
   })
 
   test('record → × cancels: nothing sent, typed text restored, idle again', async ($, on) => {
@@ -100,7 +101,7 @@ describe('dictate', () => {
     const ui = await mountHint($)
     await ui.press({ key: 'mic' })
     await ui.press({ key: 'mic' })
-    expect(await ui.find({ text: 'transcribing' })).toBeDefined()
+    expect(await ui.find({ text: 'Transcribing' })).toBeDefined()
     await clock.advance(5000)
     expect(state.keys).toEqual(['f9', 'f9'])
     expect(state.sent).toEqual(['compara também com a versão anterior'])
@@ -142,7 +143,7 @@ describe('dictate', () => {
     const ui = await mountHint($)
     await ui.press({ key: 'mic' })
     await ui.press({ key: 'mic' })
-    await ui.press({ key: 'mic' }) // lands while transcribing: ignored
+    expect(await ui.find({ key: 'mic' })).toBeUndefined() // no mic to press while transcribing
     await clock.advance(15000)
     expect(state.keys).toEqual(['f9', 'f9'])
     expect(state.sent).toEqual(['one two three four'])

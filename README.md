@@ -7,8 +7,15 @@ Click it again to send.
 Click × to discard.
 
 ```
-❯ investiga esse erro e                              🎤     idle
-❯                                       ● 0:07   ×   🎤     recording
+                                             ╭──────────────╮
+                                             │ 🎤  Dictate  │      idle
+                                             ╰──────────────╯
+❯ investiga esse erro e
+
+                         ╭───────────────────────────────────╮
+                         │ ● 0:07    × Cancel    🎤  Send     │      recording
+                         ╰───────────────────────────────────╯
+❯
 ```
 
 The controls sit at the right end, right above the prompt row, in the band Claude
@@ -72,6 +79,8 @@ In `/plugin` → dictate → configure (or `pluginConfigs.dictate` in settings):
 
 - `icon`: `nerd` (default, the Nerd Font microphone; needs a Nerd Font in the
   terminal) or `emoji` (🎤).
+- `beside`: turn on when another plugin draws a card in the same band above
+  Dictate's (AFKSwitch, for one), so the two sit side by side instead of stacking.
 
 ## Privacy
 
