@@ -11,8 +11,9 @@ Click × to discard.
 ❯                                       ● 0:07   ×   🎤     recording
 ```
 
-The controls sit at the right end of the prompt row, like the dictation button in
-the Claude and ChatGPT apps.
+The controls sit at the right end, right above the prompt row, in the band Claude
+Code keeps there for plugins: as close to the dictation button of the Claude and
+ChatGPT apps as a mod can draw (no plugin can draw inside the prompt row itself).
 
 Whatever you had typed stays: `investiga esse erro e` + spoken
 `compara com a versão anterior` is sent as one prompt.
@@ -71,8 +72,6 @@ In `/plugin` → dictate → configure (or `pluginConfigs.dictate` in settings):
 
 - `icon`: `nerd` (default, the Nerd Font microphone; needs a Nerd Font in the
   terminal) or `emoji` (🎤).
-- `promptRows`: how many rows above the hint line the prompt row is (default `4`,
-  a two-line status line). Change it if the mic lands on the wrong row.
 
 ## Privacy
 

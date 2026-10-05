@@ -158,20 +158,23 @@ export const register: Register = (on, options) => {
     return { ...edited, text: prefix + edited.text, cursor: prefix.length + edited.cursor }
   })
 
-  // The controls sit at the right end of the prompt row. No site draws there, so
-  // they ride the hint line under the prompt and are painted `promptRows` rows up.
-  on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
+  // The controls sit at the right end of the band right above the prompt row (no
+  // site draws inside the prompt row), bottom-aligned, so they touch the prompt.
+  // Whatever other plugins draw in the band stays, to the left.
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     isWorking = e.props.isWorking
-    if (e.surface !== 'terminal' && e.surface !== 'desktop') return next(e)
+    if (e.props.hasSurvey || (e.surface !== 'terminal' && e.surface !== 'desktop')) return next(e)
     const { Box, Text, Button } = $.ui.resolve(e)
     const isLive = phase === 'recording' || phase === 'transcribing'
     const icon = ICONS[options.icon === 'emoji' ? 'emoji' : 'nerd']
-    const rowsUp = typeof options.promptRows === 'number' ? options.promptRows : 4
+    const others = await next(e)
 
     return (
-      <Box width="100%">
-        {await next(e)}
-        <Box position="absolute" top={-rowsUp} right={1} flexDirection="row">
+      <Box flexDirection="row" width={e.props.bodyColumns} alignItems="flex-end">
+        <Box flexGrow={1} flexShrink={1}>
+          {others}
+        </Box>
+        <Box flexDirection="row" flexShrink={0}>
           {phase === 'recording' && <Text color="red">● {elapsed(Date.now())}  </Text>}
           {phase === 'transcribing' && <Text dimColor>transcribing…  </Text>}
           {phase === 'error' && <Text color="red">{message}  </Text>}

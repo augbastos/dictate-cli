@@ -13,9 +13,9 @@ function fakeClaude($: Engine, on: On, native: Native, draft = '') {
   const clock = mock.clock(on)
   const state = { box: draft, isRecording: false, keys: [] as string[], sent: [] as string[] }
 
-  on('ui.render', { component: 'PromptHint' }, ($, e) => {
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
     const { Text } = $.ui.resolve(e)
-    return h(Text, { dimColor: true }, e.props.hint)
+    return h(Text, { dimColor: true }, 'another plugin')
   })
   on('prompt.read',() => ({ value: { text: state.box, cursor: state.box.length } }))
   on('ui.toast', () => ({ value: undefined }))
@@ -55,10 +55,17 @@ function fakeClaude($: Engine, on: On, native: Native, draft = '') {
   return { clock, state }
 }
 
-const HINT = { isDraft: false, isWorking: false, hint: '? for shortcuts' }
+const BAND = {
+  hasSurvey: false,
+  isWorking: false,
+  maxRows: 10,
+  bodyColumns: 80,
+  scroll: { bodyRows: 9, top: 0 },
+  view: {},
+}
 
 async function mountHint($: Engine) {
-  return $.ui.mount({ plugin: 'dictate', surface: 'terminal', component: 'PromptHint', props: HINT })
+  return $.ui.mount({ plugin: 'dictate', surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
 }
 
 describe('dictate', () => {
