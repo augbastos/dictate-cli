@@ -170,10 +170,10 @@ export const register: Register = (on, options) => {
     const others = await next(e)
 
     return (
-      <Box flexDirection="row" width={e.props.bodyColumns} alignItems="flex-end">
-        <Box flexGrow={1} flexShrink={1}>
-          {others}
-        </Box>
+      // No width on any Box around `others`: the engine refuses its own node under one.
+      <Box flexDirection="row" alignItems="flex-end">
+        {others}
+        <Box flexGrow={1} />
         <Box flexDirection="row" flexShrink={0}>
           {phase === 'recording' && <Text color="red">● {elapsed(Date.now())}  </Text>}
           {phase === 'transcribing' && <Text dimColor>transcribing…  </Text>}
