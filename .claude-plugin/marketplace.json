@@ -1,0 +1,13 @@
+{
+  "name": "dictate",
+  "description": "Dictate: a clickable mic for Claude Code's built-in voice dictation.",
+  "owner": { "name": "Augusto Bastos" },
+  "plugins": [
+    {
+      "name": "dictate",
+      "source": "./",
+      "description": "A clickable mic for Claude Code's built-in voice dictation.",
+      "author": { "name": "Augusto Bastos" }
+    }
+  ]
+}

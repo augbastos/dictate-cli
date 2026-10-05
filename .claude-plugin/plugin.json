@@ -1,0 +1,7 @@
+{
+  "name": "dictate",
+  "version": "0.1.0",
+  "description": "Dictate: a clickable mic for Claude Code's built-in voice dictation. Click to start, click again to send, × to discard.",
+  "author": { "name": "Augusto Bastos" },
+  "license": "MIT"
+}
