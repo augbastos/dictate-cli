@@ -175,6 +175,24 @@ describe('dictate', () => {
     expect(await ui.find({ key: 'cancel' })).toBeUndefined()
   })
 
+  test('typing while it transcribes stops auto-send and keeps the draft in front', async ($, on) => {
+    const { clock, state } = fakeClaude($, on, { transcript: '' }, 'base')
+    on('prompt.edit', (_, e) => {
+      const text = e.text.slice(0, e.start) + e.inputText + e.text.slice(e.end)
+      return { text, cursor: e.start + e.inputText.length }
+    })
+    const ui = await mountHint($)
+    await ui.press({ key: 'mic' })
+    await ui.press({ key: 'mic' })
+    const typed = await $.prompt.edit({
+      origin: { kind: 'composer' }, key: { key: 'x' }, text: '', cursor: 0, start: 0, end: 0, inputText: 'x',
+    })
+    expect(typed.text).toBe('base x')
+    await clock.advance(15000)
+    expect(state.sent).toEqual([])
+    expect(await ui.find({ key: 'cancel' })).toBeUndefined()
+  })
+
   test('a prompt the person types without Dictate passes untouched', async ($, on) => {
     const { state } = fakeClaude($, on, { transcript: '' })
     await mountHint($)

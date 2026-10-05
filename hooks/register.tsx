@@ -24,6 +24,7 @@ let phase: Phase = 'idle'
 let base = ''
 let run = 0 // bumped on every start, cancel and finish, so a stale poll stops
 let message = ''
+let isWorking = false // a turn is running: Esc would interrupt it
 
 function show($: EngineInterface, next: Phase) {
   phase = next
@@ -51,7 +52,8 @@ async function fail($: EngineInterface, text: string) {
   })
 }
 
-async function finish($: EngineInterface, transcript: string) {
+async function finish($: EngineInterface, id: number, transcript: string) {
+  if (run !== id) return // Claude Code already sent it
   run++
   const text = merge(base, transcript)
   show($, 'idle')
@@ -92,15 +94,16 @@ async function stop($: EngineInterface) {
     await $.clock.sleep(POLL_MS)
     if (run !== id) return // Claude Code sent it: the prompt.submit hook merged it
     const { text } = await $.prompt.read()
+    if (run !== id) return
     same = text === last ? same + 1 : 0
     last = text
-    if (text.trim() !== '' && same >= SETTLE_POLLS) return finish($, text)
+    if (text.trim() !== '' && same >= SETTLE_POLLS) return finish($, id, text)
   }
   if (run !== id) return
-  if (last.trim() !== '') return finish($, last)
+  if (last.trim() !== '') return finish($, id, last)
   // Nothing heard: make sure nothing is still listening, give the draft back.
   run++
-  await press($, 'escape')
+  if (!isWorking) await press($, 'escape')
   await $.prompt.fill({ text: base })
   show($, 'idle')
 }
@@ -127,7 +130,20 @@ export const register: Register = on => {
     return next(text === null ? e : { ...e, text })
   })
 
+  // Typing while Claude Code transcribes: the person takes over. Stop auto-sending
+  // and put the draft back in front of what is there.
+  on('prompt.edit', async ($, e, next) => {
+    if (phase !== 'transcribing' || e.key === undefined) return next(e)
+    run++
+    show($, 'idle')
+    const edited = await next(e)
+    const gap = base === '' || edited.text === '' || /\s$/.test(base) ? '' : ' '
+    const prefix = base + gap
+    return { ...edited, text: prefix + edited.text, cursor: prefix.length + edited.cursor }
+  })
+
   on('ui.render', { component: 'PromptHint' }, ($, e, next) => {
+    isWorking = e.props.isWorking
     if (e.surface !== 'terminal' && e.surface !== 'desktop') return next(e)
     const { Box, Text, Button } = $.ui.resolve(e)
     const isLive = phase === 'recording' || phase === 'transcribing'

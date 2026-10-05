@@ -1,50 +1,58 @@
 <#
 .SYNOPSIS
-  Removes Dictate: uninstalls the plugin and its marketplace, restores the voice and
-  renderer settings install.ps1 changed, and removes the F9 / Space voice bindings.
-.PARAMETER Backup
-  The backup folder install.ps1 printed; the newest dictate-* backup when omitted.
+  Removes Dictate: uninstalls the plugin and its marketplace, and puts back the voice,
+  renderer and F9 / Space binding values recorded before the first install.
 #>
-param([string]$Backup)
 $ErrorActionPreference = 'Stop'
 
 $claudeDir = Join-Path $HOME '.claude'
 $settingsPath = Join-Path $claudeDir 'settings.json'
 $keysPath = Join-Path $claudeDir 'keybindings.json'
-if (-not $Backup) {
-    $Backup = Get-ChildItem (Join-Path $claudeDir 'backups') -Directory -Filter 'dictate-*' |
-        Sort-Object Name | Select-Object -Last 1 -ExpandProperty FullName
+$previousPath = Join-Path $claudeDir 'backups\dictate-previous.json'
+
+function Write-JsonAtomic($value, $path, $depth) {
+    $tmp = "$path.dictate-tmp"
+    $value | ConvertTo-Json -Depth $depth | Set-Content $tmp -Encoding utf8
+    Move-Item -Force $tmp $path
+}
+function Restore($object, $name, $saved) {
+    if ($saved.present) { $object | Add-Member -Force $name $saved.value }
+    else { $object.PSObject.Properties.Remove($name) }
 }
 
 claude plugin uninstall dictate@dictate --scope user
 claude plugin marketplace remove dictate
 
-# settings.json: put back the voice and tui values from before install.
-$previousPath = if ($Backup) { Join-Path $Backup 'dictate-previous.json' }
-if ($previousPath -and (Test-Path $previousPath) -and (Test-Path $settingsPath)) {
-    $previous = Get-Content $previousPath -Raw | ConvertFrom-Json
+if (-not (Test-Path $previousPath)) {
+    Write-Warning "No ${previousPath}: settings and keybindings left as they are."
+    exit 0
+}
+$previous = Get-Content $previousPath -Raw | ConvertFrom-Json
+
+if (Test-Path $settingsPath) {
     $settings = Get-Content $settingsPath -Raw | ConvertFrom-Json
-    foreach ($name in 'voice', 'tui') {
-        $value = $previous.$name
-        if ($null -eq $value) { $settings.PSObject.Properties.Remove($name) }
-        else { $settings | Add-Member -Force $name $value }
-    }
-    $settings | ConvertTo-Json -Depth 100 | Set-Content $settingsPath -Encoding utf8
-} else {
-    Write-Warning 'No install backup found: voice and tui settings left as they are.'
+    Restore $settings 'voice' $previous.voice
+    Restore $settings 'tui' $previous.tui
+    Write-JsonAtomic $settings $settingsPath 100
 }
 
-# keybindings.json: drop the two bindings Dictate added.
 if (Test-Path $keysPath) {
     $keys = Get-Content $keysPath -Raw | ConvertFrom-Json
-    foreach ($block in @($keys.bindings) | Where-Object { $_.context -eq 'Chat' }) {
-        if ($block.bindings.f9 -eq 'voice:pushToTalk') { $block.bindings.PSObject.Properties.Remove('f9') }
-        if ($block.bindings.PSObject.Properties['space'] -and $null -eq $block.bindings.space) {
-            $block.bindings.PSObject.Properties.Remove('space')
+    $chat = @($keys.bindings) | Where-Object { $_.context -eq 'Chat' } | Select-Object -First 1
+    if ($chat) {
+        Restore $chat.bindings 'f9' $previous.f9
+        Restore $chat.bindings 'space' $previous.space
+        $isEmpty = @($chat.bindings.PSObject.Properties).Count -eq 0
+        if (-not $previous.chatBlock -and $isEmpty) {
+            $keys.bindings = @($keys.bindings | Where-Object { $_ -ne $chat })
         }
     }
-    $keys.bindings = @($keys.bindings | Where-Object { @($_.bindings.PSObject.Properties).Count -gt 0 })
-    $keys | ConvertTo-Json -Depth 20 | Set-Content $keysPath -Encoding utf8
+    if (@($keys.bindings).Count -eq 0 -and @($keys.PSObject.Properties).Count -eq 1) {
+        Remove-Item $keysPath # Dictate created it
+    } else {
+        Write-JsonAtomic $keys $keysPath 20
+    }
 }
 
+Remove-Item $previousPath
 Write-Host 'Dictate removed. Restart Claude Code sessions (or /reload-plugins) to drop the mic.'
