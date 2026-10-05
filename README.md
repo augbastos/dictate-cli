@@ -138,8 +138,10 @@ values recorded before the first install.
 ## Known limitations
 
 - An Esc pressed before any words show up cannot be seen by Dictate: the card stays
-  on REC until the next press. That press finds nothing to send, cancels whatever
-  still listens and gives your draft back.
+  on REC until the next press. That press finds nothing to send, gives your draft
+  back and never presses the voice key blind.
+- A word spoken right before stopping has 1.5 s to show up as live text; Dictate
+  sends nothing it has not seen.
 - The Application/Menu key is not supported (see above).
 
 ## Troubleshooting
