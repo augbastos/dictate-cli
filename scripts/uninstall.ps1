@@ -33,6 +33,11 @@ if (Test-Path $settingsPath) {
     $settings = Get-Content $settingsPath -Raw | ConvertFrom-Json
     Restore $settings 'voice' $previous.voice
     Restore $settings 'tui' $previous.tui
+    $configs = $settings.PSObject.Properties['pluginConfigs']
+    if ($configs) {
+        $configs.Value.PSObject.Properties.Remove('dictate@dictate')
+        if (@($configs.Value.PSObject.Properties).Count -eq 0) { $settings.PSObject.Properties.Remove('pluginConfigs') }
+    }
     Write-JsonAtomic $settings $settingsPath 100
 }
 

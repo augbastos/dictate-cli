@@ -7,12 +7,14 @@
   Run it on every machine: the helper (bin/) is built locally, never committed.
 .PARAMETER NoFullscreen
   Leave the renderer alone (the mic is then not clickable; the keyboard shortcut still works).
+.PARAMETER Beside
+  Set Dictate's `beside` option: share the band row with another plugin's card (AFKSwitch).
 .PARAMETER Shortcut
   The Dictate key: f9 (default) or disabled. The Application/Menu key is not supported:
   Claude Code's key reader has no name for it, so no keybinding can hold it, and
   Dictate does not install a global keyboard hook.
 #>
-param([switch]$NoFullscreen, [string]$Shortcut = 'f9')
+param([switch]$NoFullscreen, [switch]$Beside, [string]$Shortcut = 'f9')
 $ErrorActionPreference = 'Stop'
 
 switch ($Shortcut.Trim().ToLowerInvariant()) {
@@ -89,6 +91,10 @@ if (-not (Test-Path $previousPath)) {
 # 4. settings.json: voice on, tap mode; fullscreen renderer unless -NoFullscreen.
 $settings | Add-Member -Force voice ([pscustomobject]@{ enabled = $true; mode = 'tap' })
 if (-not $NoFullscreen) { $settings | Add-Member -Force tui 'fullscreen' }
+if ($Beside) {
+    if (-not $settings.PSObject.Properties['pluginConfigs']) { $settings | Add-Member pluginConfigs ([pscustomobject]@{}) }
+    $settings.pluginConfigs | Add-Member -Force 'dictate@dictate' ([pscustomobject]@{ options = [pscustomobject]@{ beside = $true } })
+}
 Write-JsonAtomic $settings $settingsPath 100
 
 # 5. keybindings.json: the user's key runs /dictate, F11 is Claude Code's voice key

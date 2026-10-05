@@ -79,6 +79,7 @@ telemetry and no background process.
 ```powershell
 pwsh -NoProfile -File scripts\install.ps1            # F9 (default)
 pwsh -NoProfile -File scripts\install.ps1 -Shortcut disabled
+pwsh -NoProfile -File scripts\install.ps1 -Beside      # share the band row with AFKSwitch
 ```
 
 Run it on every machine: the helper is built locally and never committed. It backs
