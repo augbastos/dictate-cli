@@ -1,6 +1,7 @@
 // dictate-key: writes ONE fixed key press into the console of the parent process
 // (Claude Code), so the mod can trigger Claude Code's own voice keybinding.
-// Accepts only "f9" or "escape"; no other input reaches the console.
+// Accepts only "f11" (bound to voice:pushToTalk) or "escape"; never the user's Dictate
+// shortcut, so a toggle cannot trigger itself.
 using System;
 using System.Runtime.InteropServices;
 
@@ -37,7 +38,7 @@ static class DictateKey
         char ch;
         switch (args.Length == 1 ? args[0] : "")
         {
-            case "f9": vk = 0x78; ch = '\0'; break;
+            case "f11": vk = 0x7A; ch = '\0'; break;
             case "escape": vk = 0x1B; ch = (char)27; break;
             default: return 64;
         }

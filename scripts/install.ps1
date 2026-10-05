@@ -1,14 +1,31 @@
 <#
 .SYNOPSIS
   Installs Dictate for the current user: builds the key helper, installs the plugin from
-  this folder, turns on Claude Code's voice dictation in tap mode on F9, and switches to
-  the fullscreen renderer (mouse clicks). Backs up every file it touches first.
+  this folder, turns on Claude Code's voice dictation in tap mode, binds the Dictate key
+  (F9), and switches to the fullscreen renderer (mouse clicks). Backs up every file it
+  touches first.
   Run it on every machine: the helper (bin/) is built locally, never committed.
 .PARAMETER NoFullscreen
-  Leave the renderer alone (the mic is then not clickable; F9 still works).
+  Leave the renderer alone (the mic is then not clickable; the keyboard shortcut still works).
+.PARAMETER Shortcut
+  The Dictate key: f9 (default) or disabled. The Application/Menu key is not supported:
+  Claude Code's key reader has no name for it, so no keybinding can hold it, and
+  Dictate does not install a global keyboard hook.
 #>
-param([switch]$NoFullscreen)
+param([switch]$NoFullscreen, [string]$Shortcut = 'f9')
 $ErrorActionPreference = 'Stop'
+
+switch ($Shortcut.Trim().ToLowerInvariant()) {
+    'f9' { $userKey = 'f9' }
+    'disabled' { $userKey = $null }
+    { $_ -in 'apps', 'menu', 'application' } {
+        throw 'The Application/Menu key cannot be a Dictate shortcut: Claude Code does not receive it from the terminal. Use -Shortcut f9 (nothing was changed).'
+    }
+    default { throw "Unknown shortcut '$Shortcut'. Use f9 or disabled (nothing was changed)." }
+}
+# The helper presses F11 for Claude Code's voice (`voice:pushToTalk`); the user's key
+# runs /dictate (`command:dictate`). Never the same key: no F9 -> Dictate -> F9 loop.
+$transportKey = 'f11'
 
 $repo = Split-Path -Parent $PSScriptRoot
 $claudeDir = Join-Path $HOME '.claude'
@@ -63,6 +80,7 @@ if (-not (Test-Path $previousPath)) {
         tui       = Value-Of $settings 'tui'
         chatBlock = [bool]$chat
         f9        = if ($chat) { Value-Of $chat.bindings 'f9' } else { @{ present = $false } }
+        f11       = if ($chat) { Value-Of $chat.bindings 'f11' } else { @{ present = $false } }
         space     = if ($chat) { Value-Of $chat.bindings 'space' } else { @{ present = $false } }
     }
     Write-JsonAtomic $previous $previousPath 10
@@ -73,13 +91,18 @@ $settings | Add-Member -Force voice ([pscustomobject]@{ enabled = $true; mode = 
 if (-not $NoFullscreen) { $settings | Add-Member -Force tui 'fullscreen' }
 Write-JsonAtomic $settings $settingsPath 100
 
-# 5. keybindings.json: F9 is the voice key; Space no longer starts dictation.
+# 5. keybindings.json: the user's key runs /dictate, F11 is Claude Code's voice key
+#    (pressed only by the helper), Space no longer starts dictation.
 if (-not $chat) {
     $chat = [pscustomobject]@{ context = 'Chat'; bindings = [pscustomobject]@{} }
     $keys.bindings = @($keys.bindings) + $chat
 }
-$chat.bindings | Add-Member -Force 'f9' 'voice:pushToTalk'
+$chat.bindings | Add-Member -Force $transportKey 'voice:pushToTalk'
 $chat.bindings | Add-Member -Force 'space' $null
+if ($userKey) { $chat.bindings | Add-Member -Force $userKey 'command:dictate' }
+elseif ($chat.bindings.PSObject.Properties['f9'] -and $chat.bindings.f9 -in 'command:dictate', 'voice:pushToTalk') {
+    $chat.bindings.PSObject.Properties.Remove('f9') # disabled: drop Dictate's own F9 only
+}
 Write-JsonAtomic $keys $keysPath 20
 
-Write-Host 'Dictate installed. Open a new Claude Code session (or /reload-plugins) and look for the mic under the prompt.'
+Write-Host 'Dictate installed. Open a new Claude Code session (or /reload-plugins) and look for the Dictate card above the prompt; F9 toggles it.'

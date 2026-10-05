@@ -1,7 +1,7 @@
 {
   "name": "dictate",
-  "version": "0.1.0",
-  "description": "Dictate: a clickable mic for Claude Code's built-in voice dictation. Click to start, click again to send, × to discard.",
+  "version": "0.2.0",
+  "description": "Dictate: voice dictation for Claude Code from a button or a key (F9). Start, stop and send, or cancel.",
   "author": { "name": "Augusto Bastos" },
   "license": "MIT",
   "userConfig": {

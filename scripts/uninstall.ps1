@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
   Removes Dictate: uninstalls the plugin and its marketplace, and puts back the voice,
-  renderer and F9 / Space binding values recorded before the first install.
+  renderer and F9 / F11 / Space binding values recorded before the first install.
 #>
 $ErrorActionPreference = 'Stop'
 
@@ -41,6 +41,7 @@ if (Test-Path $keysPath) {
     $chat = @($keys.bindings) | Where-Object { $_.context -eq 'Chat' } | Select-Object -First 1
     if ($chat) {
         Restore $chat.bindings 'f9' $previous.f9
+        Restore $chat.bindings 'f11' $previous.f11
         Restore $chat.bindings 'space' $previous.space
         $isEmpty = @($chat.bindings.PSObject.Properties).Count -eq 0
         if (-not $previous.chatBlock -and $isEmpty) {
