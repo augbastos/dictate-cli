@@ -202,12 +202,22 @@ export const register: Register = (on, options) => {
       )
     }
     // We are the bottom of the chain. With `beside`, a plugin drawn above us in the
-    // band (AFKSwitch) shares our rows instead of stacking under the card.
+    // band (AFKSwitch) shares our rows instead of stacking under the card: the card's
+    // own Box pulls the next sibling up (a Box clips what overflows it, so the margin
+    // sits on the outermost Box). The engine's node is left out there: under a Box
+    // with a margin it is refused, and with no survey (checked above) it draws nothing.
+    if (options.beside === true) {
+      return (
+        <Box flexDirection="row" justifyContent="flex-end" marginBottom={-3}>
+          {card}
+        </Box>
+      )
+    }
     // No width or margin on any Box around `others`: the engine refuses its node there.
     return (
       <Box flexDirection="column">
         {others}
-        <Box flexDirection="row" justifyContent="flex-end" marginBottom={options.beside === true ? -3 : 0}>
+        <Box flexDirection="row" justifyContent="flex-end">
           {card}
         </Box>
       </Box>
