@@ -86,14 +86,28 @@ if (-not (Test-Path $previousPath)) {
         space     = if ($chat) { Value-Of $chat.bindings 'space' } else { @{ present = $false } }
     }
     Write-JsonAtomic $previous $previousPath 10
+} else {
+    # Upgrade from a version that did not record every key: record it now, while the
+    # value in place is still the user's own (not one Dictate sets).
+    $previous = Get-Content $previousPath -Raw | ConvertFrom-Json
+    if (-not $previous.PSObject.Properties['f11']) {
+        $f11 = if ($chat) { Value-Of $chat.bindings 'f11' } else { @{ present = $false } }
+        if ($f11.present -and $f11.value -eq 'voice:pushToTalk') { $f11 = @{ present = $false } }
+        $previous | Add-Member f11 ([pscustomobject]$f11)
+        Write-JsonAtomic $previous $previousPath 10
+    }
 }
 
 # 4. settings.json: voice on, tap mode; fullscreen renderer unless -NoFullscreen.
 $settings | Add-Member -Force voice ([pscustomobject]@{ enabled = $true; mode = 'tap' })
 if (-not $NoFullscreen) { $settings | Add-Member -Force tui 'fullscreen' }
 if ($Beside) {
+    # Merge: keep any other Dictate option the user set (icon).
     if (-not $settings.PSObject.Properties['pluginConfigs']) { $settings | Add-Member pluginConfigs ([pscustomobject]@{}) }
-    $settings.pluginConfigs | Add-Member -Force 'dictate@dictate' ([pscustomobject]@{ options = [pscustomobject]@{ beside = $true } })
+    $entry = $settings.pluginConfigs.PSObject.Properties['dictate@dictate']?.Value
+    if (-not $entry) { $entry = [pscustomobject]@{}; $settings.pluginConfigs | Add-Member 'dictate@dictate' $entry }
+    if (-not $entry.PSObject.Properties['options']) { $entry | Add-Member options ([pscustomobject]@{}) }
+    $entry.options | Add-Member -Force beside $true
 }
 Write-JsonAtomic $settings $settingsPath 100
 

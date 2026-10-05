@@ -58,19 +58,25 @@ function fakeClaude($: Engine, on: On, native: Native, draft = '') {
     else if (!state.isRecording) {
       if (state.box !== '') return { value: ok } // tap mode starts only on an empty prompt
       state.isRecording = true
-      if (native.interim !== undefined) {
+      // The live transcript shows in the prompt while recording (none when silent).
+      const interim = native.interim ?? native.transcript
+      if (interim !== '') {
         void (async () => {
           await clock.sleep(300)
-          if (state.isRecording) state.box = native.interim ?? ''
+          if (state.isRecording) state.box = interim
         })()
       }
     } else {
       state.isRecording = false
       state.isProcessing = true
+      const shown = state.box
       void (async () => {
         await clock.sleep(native.transcribeMs ?? 600) // transcription
         if (!state.isProcessing) return // cancelled meanwhile
         state.isProcessing = false
+        // Claude Code drops the final insert (and its send) when the prompt changed
+        // since its live transcript ("input_diverged").
+        if (state.box !== shown) return
         const words = native.transcript.trim().split(/\s+/).filter(Boolean).length
         if (words >= 3) {
           state.box = ''
@@ -219,7 +225,7 @@ for (const via of ['mouse', 'keyboard'] as const) {
       await clock.advance(15000)
       expect(state.sent).toEqual([])
       expect(state.box).toBe('linha 1\nlinha 2 ')
-      expect(state.keys).toEqual(['f11', 'f11', 'escape'])
+      expect(state.keys).toEqual(['f11', 'escape']) // never F11 blind: Esc, then the draft
       expect(await ui.find({ key: 'cancel' })).toBeUndefined()
     })
 
@@ -261,13 +267,14 @@ for (const via of ['mouse', 'keyboard'] as const) {
     })
 
     test('typing while it transcribes stops auto-send and keeps the draft in front', async ($, on) => {
-      const { clock, state, ui, toggle } = await setup($, on, { transcript: '' }, 'base')
+      const { clock, state, ui, toggle } = await setup($, on, { transcript: 'algo dito aqui', transcribeMs: 5000 }, 'base')
       await toggle()
       await toggle()
       const typed = await $.prompt.edit({
         origin: { kind: 'composer' }, key: { key: 'x' }, text: '', cursor: 0, start: 0, end: 0, inputText: 'x',
       })
       expect(typed.text).toBe('base x')
+      state.box = typed.text // the box shows what the edit chain answered
       await clock.advance(15000)
       expect(state.sent).toEqual([])
       expect(await ui.find({ key: 'cancel' })).toBeUndefined()
@@ -330,6 +337,18 @@ describe('keyboard specifics', () => {
     await clock.advance(1000)
     esc()
     await clock.advance(2000)
+    expect(state.box).toBe('rascunho')
+    expect(state.sent).toEqual([])
+  })
+
+  test('while a turn runs, × before any words presses no Esc (it would interrupt the turn)', async ($, on) => {
+    const { clock, state } = fakeClaude($, on, { transcript: '' }, 'rascunho')
+    const ui = await $.ui.mount({ plugin: 'dictate', surface: 'terminal', component: 'AbovePrompt', props: { ...BAND, isWorking: true } as never })
+    await ui.press({ key: 'mic' })
+    const cancelling = ui.press({ key: 'cancel' })
+    await clock.advance(1000)
+    await cancelling
+    expect(state.keys).toEqual(['f11'])
     expect(state.box).toBe('rascunho')
     expect(state.sent).toEqual([])
   })

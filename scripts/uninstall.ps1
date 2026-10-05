@@ -15,8 +15,11 @@ function Write-JsonAtomic($value, $path, $depth) {
     $value | ConvertTo-Json -Depth $depth | Set-Content $tmp -Encoding utf8
     Move-Item -Force $tmp $path
 }
-function Restore($object, $name, $saved) {
-    if ($saved.present) { $object | Add-Member -Force $name $saved.value }
+function Restore($object, $name, $saved, $dictateValue) {
+    if ($null -eq $saved) {
+        # Not recorded (an older install): remove only what Dictate itself set.
+        if ($object.PSObject.Properties[$name] -and $object.$name -eq $dictateValue) { $object.PSObject.Properties.Remove($name) }
+    } elseif ($saved.present) { $object | Add-Member -Force $name $saved.value }
     else { $object.PSObject.Properties.Remove($name) }
 }
 
@@ -35,6 +38,7 @@ if (Test-Path $settingsPath) {
     Restore $settings 'tui' $previous.tui
     $configs = $settings.PSObject.Properties['pluginConfigs']
     if ($configs) {
+        # Plugin uninstall already drops the plugin's options; this clears what is left.
         $configs.Value.PSObject.Properties.Remove('dictate@dictate')
         if (@($configs.Value.PSObject.Properties).Count -eq 0) { $settings.PSObject.Properties.Remove('pluginConfigs') }
     }
@@ -45,9 +49,9 @@ if (Test-Path $keysPath) {
     $keys = Get-Content $keysPath -Raw | ConvertFrom-Json
     $chat = @($keys.bindings) | Where-Object { $_.context -eq 'Chat' } | Select-Object -First 1
     if ($chat) {
-        Restore $chat.bindings 'f9' $previous.f9
-        Restore $chat.bindings 'f11' $previous.f11
-        Restore $chat.bindings 'space' $previous.space
+        Restore $chat.bindings 'f9' $previous.f9 'command:dictate'
+        Restore $chat.bindings 'f11' $previous.f11 'voice:pushToTalk'
+        Restore $chat.bindings 'space' $previous.space $null
         $isEmpty = @($chat.bindings.PSObject.Properties).Count -eq 0
         if (-not $previous.chatBlock -and $isEmpty) {
             $keys.bindings = @($keys.bindings | Where-Object { $_ -ne $chat })
