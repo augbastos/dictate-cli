@@ -3,5 +3,20 @@
   "version": "0.1.0",
   "description": "Dictate: a clickable mic for Claude Code's built-in voice dictation. Click to start, click again to send, × to discard.",
   "author": { "name": "Augusto Bastos" },
-  "license": "MIT"
+  "license": "MIT",
+  "userConfig": {
+    "icon": {
+      "type": "string",
+      "title": "Mic icon",
+      "description": "nerd: Nerd Font microphone (needs a Nerd Font in the terminal). emoji: the 🎤 emoji.",
+      "options": ["nerd", "emoji"],
+      "default": "nerd"
+    },
+    "promptRows": {
+      "type": "number",
+      "title": "Rows from the hint line up to the prompt row",
+      "description": "Where the mic is painted. 4 fits a two-line status line; change it if the mic lands on the wrong row.",
+      "default": 4
+    }
+  }
 }

@@ -17,6 +17,11 @@ const SETTLE_POLLS = 6
 const GIVE_UP_MS = 12_000
 const KEY_GAP_MS = 150
 const ERROR_MS = 2500
+// Nerd Font glyphs (nf-md-microphone, nf-md-close) by default; `icon: emoji` for plain fonts.
+const ICONS = {
+  nerd: { mic: '\u{F036C}', cancel: '\u{F0156}' },
+  emoji: { mic: '\u{1F3A4}', cancel: '×' },
+}
 
 // ponytail: module state is lost on a hot reload mid-recording; × or the next
 // click recovers. Move it to $.state if that ever matters.
@@ -26,9 +31,19 @@ let run = 0 // bumped on every start, cancel and finish, so a stale poll stops
 let message = ''
 let isWorking = false // a turn is running: Esc would interrupt it
 
+let startedAt = 0
+let ticker: { cancel: () => void } | undefined // redraws the recording timer
+
 function show($: EngineInterface, next: Phase) {
   phase = next
+  ticker?.cancel()
+  ticker = next === 'recording' ? $.clock.every(1000, () => $.ui.invalidate('ui.render')) : undefined
   $.ui.invalidate('ui.render')
+}
+
+function elapsed(now: number) {
+  const seconds = Math.max(0, Math.floor((now - startedAt) / 1000))
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
 async function press($: EngineInterface, key: Key) {
@@ -67,6 +82,7 @@ async function finish($: EngineInterface, id: number, transcript: string) {
 
 async function start($: EngineInterface) {
   if (phase === 'recording' || phase === 'transcribing') return
+  startedAt = Date.now()
   show($, 'recording')
   run++
   base = (await $.prompt.read()).text
@@ -119,7 +135,7 @@ async function cancel($: EngineInterface) {
   if (!isCancelled) $.ui.toast('Dictate: press Esc to stop the recording')
 }
 
-export const register: Register = on => {
+export const register: Register = (on, options) => {
   // Claude Code sends a tap-mode transcript of 3+ words itself: put the draft in front.
   on('prompt.submit', async ($, e, next) => {
     const isOurs = phase === 'recording' || phase === 'transcribing'
@@ -142,31 +158,33 @@ export const register: Register = on => {
     return { ...edited, text: prefix + edited.text, cursor: prefix.length + edited.cursor }
   })
 
-  on('ui.render', { component: 'PromptHint' }, ($, e, next) => {
+  // The controls sit at the right end of the prompt row. No site draws there, so
+  // they ride the hint line under the prompt and are painted `promptRows` rows up.
+  on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
     isWorking = e.props.isWorking
     if (e.surface !== 'terminal' && e.surface !== 'desktop') return next(e)
     const { Box, Text, Button } = $.ui.resolve(e)
     const isLive = phase === 'recording' || phase === 'transcribing'
+    const icon = ICONS[options.icon === 'emoji' ? 'emoji' : 'nerd']
+    const rowsUp = typeof options.promptRows === 'number' ? options.promptRows : 4
 
     return (
-      <Box flexDirection="row" width="100%">
-        <Box flexGrow={1} flexShrink={1}>
-          <Text dimColor wrap="truncate-end">
-            {e.props.hint}
-          </Text>
+      <Box width="100%">
+        {await next(e)}
+        <Box position="absolute" top={-rowsUp} right={1} flexDirection="row">
+          {phase === 'recording' && <Text color="red">● {elapsed(Date.now())}  </Text>}
+          {phase === 'transcribing' && <Text dimColor>transcribing…  </Text>}
+          {phase === 'error' && <Text color="red">{message}  </Text>}
+          {isLive && <Button key="cancel" label={icon.cancel} plain onPress={() => void cancel($)} />}
+          {isLive && <Text>  </Text>}
+          <Button
+            key="mic"
+            label={icon.mic}
+            plain
+            dimColor={phase !== 'recording'}
+            onPress={() => void (phase === 'recording' ? stop($) : start($))}
+          />
         </Box>
-        {phase === 'recording' && <Text color="red">● REC </Text>}
-        {phase === 'transcribing' && <Text dimColor>transcribing… </Text>}
-        {phase === 'error' && <Text color="red">{message} </Text>}
-        {isLive && <Button key="cancel" label="×" plain onPress={() => void cancel($)} />}
-        {isLive && <Text> </Text>}
-        <Button
-          key="mic"
-          label="🎤"
-          plain
-          dimColor={!isLive}
-          onPress={() => void (phase === 'recording' ? stop($) : start($))}
-        />
       </Box>
     )
   })

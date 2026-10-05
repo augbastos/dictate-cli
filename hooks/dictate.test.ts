@@ -13,7 +13,11 @@ function fakeClaude($: Engine, on: On, native: Native, draft = '') {
   const clock = mock.clock(on)
   const state = { box: draft, isRecording: false, keys: [] as string[], sent: [] as string[] }
 
-  on('prompt.read', () => ({ value: { text: state.box, cursor: state.box.length } }))
+  on('ui.render', { component: 'PromptHint' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return h(Text, { dimColor: true }, e.props.hint)
+  })
+  on('prompt.read',() => ({ value: { text: state.box, cursor: state.box.length } }))
   on('ui.toast', () => ({ value: undefined }))
   on('prompt.fill', (_, e) => {
     state.box = e.mode === 'append' ? state.box + e.text : e.text
@@ -66,7 +70,7 @@ describe('dictate', () => {
     expect(state.keys).toEqual(['f9'])
     expect(state.isRecording).toBe(true)
     expect(await ui.find({ key: 'cancel' })).toBeDefined()
-    expect(await ui.find({ text: 'REC' })).toBeDefined()
+    expect(await ui.find({ text: /● 0:0/ })).toBeDefined()
   })
 
   test('record → × cancels: nothing sent, typed text restored, idle again', async ($, on) => {

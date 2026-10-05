@@ -7,9 +7,12 @@ Click it again to send.
 Click × to discard.
 
 ```
-? for shortcuts                                   🎤      idle
-? for shortcuts                    ● REC  ×  🎤           recording
+❯ investiga esse erro e                              🎤     idle
+❯                                       ● 0:07   ×   🎤     recording
 ```
+
+The controls sit at the right end of the prompt row, like the dictation button in
+the Claude and ChatGPT apps.
 
 Whatever you had typed stays: `investiga esse erro e` + spoken
 `compara com a versão anterior` is sent as one prompt.
@@ -61,6 +64,15 @@ New sessions show the mic. A running session picks it up with `/reload-plugins`.
 
 Keyboard: `F9` toggles Claude Code's dictation directly. It starts only on an empty
 prompt, because that is how Claude Code's tap mode works. `Esc` cancels.
+
+## Options
+
+In `/plugin` → dictate → configure (or `pluginConfigs.dictate` in settings):
+
+- `icon`: `nerd` (default, the Nerd Font microphone; needs a Nerd Font in the
+  terminal) or `emoji` (🎤).
+- `promptRows`: how many rows above the hint line the prompt row is (default `4`,
+  a two-line status line). Change it if the mic lands on the wrong row.
 
 ## Privacy
 
