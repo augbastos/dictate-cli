@@ -58,7 +58,7 @@ Claude Code does not route them to keybindings.
 
 A click on the button makes the band above the prompt hold the keyboard. There, Esc
 would only leave the band. The band lets go whenever the prompt text changes, so
-DictateCLI changes the prompt and puts it back through the official prompt API.
+DictateCLI changes the prompt and puts it back through Claude Code's prompt API.
 
 ## Install and rollback
 

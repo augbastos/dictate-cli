@@ -1,8 +1,9 @@
 #Requires -Version 7
 <#
 .SYNOPSIS
-  Removes DictateCLI: uninstalls the plugin and its marketplace, and puts back the voice,
-  renderer and F9 / F11 / Space binding values recorded before the first install.
+  Removes DictateCLI: uninstalls the plugin and its marketplace, and puts back the voice
+  and renderer settings and the Alt+D / F11 / Space bindings (plus an F9 from older
+  installs) recorded before the first install.
 #>
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'common.ps1')

@@ -18,7 +18,7 @@ jobs:
       - name: No personal paths, private references or secrets in tracked files
         run: |
           pattern='([A-Z]:\\\\Users\\\\|/Users/[a-z]|/home/[a-z]|_handoffs|DevData|BEGIN [A-Z ]*PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{20,}|sk-ant-|AKIA[0-9A-Z]{16})'
-          if git grep -n -I -E "$pattern" -- . ':!.github/workflows/ci.yml' ':!hooks/*.test.ts'; then
+          if git grep -n -I -E "$pattern" -- . ':!.github/workflows/ci.yml'; then
             echo "::error::private or secret-looking content in tracked files"
             exit 1
           fi

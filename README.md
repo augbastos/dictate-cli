@@ -55,16 +55,15 @@ needed.
 
 ## Privacy
 
-DictateCLI does not record or store audio and adds no telemetry.
-
-Voice recording and transcription are handled by Claude Code's built-in voice
-feature, through Anthropic.
+DictateCLI itself records nothing, stores nothing, opens no network connection and adds
+no telemetry. Your voice is captured and transcribed by Claude Code's built-in voice
+dictation, which sends the audio to Anthropic. Details: [PRIVACY.md](PRIVACY.md).
 
 ## Compatibility
 
 Tested on **Windows 11 x64**, with Claude Code in the VS Code integrated terminal.
 Windows 10 x64 is expected to work but not yet tested.
-DictateCLI runs inside Claude Code, so it is not tied to a specific editor.
+Other terminals, such as Windows Terminal, are not yet tested.
 
 macOS and Linux are not supported in this release. Details:
 [docs/compatibility.md](docs/compatibility.md)
@@ -98,4 +97,4 @@ See [docs/architecture.md](docs/architecture.md).
 
 ## License
 
-MIT
+MIT. DictateCLI is an independent community plugin, not made or endorsed by Anthropic.

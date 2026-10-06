@@ -386,7 +386,7 @@ describe('keyboard specifics', () => {
 
   test('the card shows the chord bound to /dictate', async ($, on) => {
     fakeClaude($, on, { transcript: '' })
-    mock.env(on, { USERPROFILE: 'C:/Users/someone' })
+    mock.env(on, { USERPROFILE: 'D:/profile' })
     on('fs.read', () => ({ value: JSON.stringify({ bindings: [{ context: 'Chat', bindings: { 'alt+d': 'command:dictate', f11: 'voice:pushToTalk' } }] }) }))
     on('command.register', () => ({ value: undefined }))
     on('session.start', (_, e) => ({ cwd: e.cwd }))

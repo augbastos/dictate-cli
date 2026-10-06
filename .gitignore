@@ -1,3 +1,4 @@
 bin/
 .claude-plugin/types/
 tsconfig.json
+.impeccable/

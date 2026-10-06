@@ -1,15 +1,35 @@
 {
   "name": "dictate-cli",
+  "displayName": "DictateCLI",
   "version": "0.3.2",
   "description": "Speak to Claude Code instead of typing: a microphone button for Claude Code's native voice dictation.",
-  "author": { "name": "Augusto Bastos" },
+  "author": {
+    "name": "Augusto Bastos",
+    "url": "https://github.com/augbastos"
+  },
+  "repository": "https://github.com/augbastos/dictate-cli",
+  "homepage": "https://github.com/augbastos/dictate-cli",
+  "documentationUrl": "https://github.com/augbastos/dictate-cli/blob/main/docs/architecture.md",
+  "supportUrl": "https://github.com/augbastos/dictate-cli/blob/main/SUPPORT.md",
+  "privacyPolicyUrl": "https://github.com/augbastos/dictate-cli/blob/main/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/augbastos/dictate-cli/blob/main/TERMS.md",
   "license": "MIT",
+  "keywords": [
+    "voice",
+    "dictation",
+    "microphone",
+    "windows",
+    "claude-code"
+  ],
   "userConfig": {
     "icon": {
       "type": "string",
       "title": "Mic icon",
       "description": "nerd: Nerd Font microphone (needs a Nerd Font in the terminal). emoji: the 🎤 emoji.",
-      "options": ["nerd", "emoji"],
+      "options": [
+        "nerd",
+        "emoji"
+      ],
       "default": "nerd"
     },
     "beside": {

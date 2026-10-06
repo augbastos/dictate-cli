@@ -6,12 +6,13 @@
   the C# compiler first, and changes nothing if one is missing.
 - `scripts/doctor.ps1`: read-only check that says what is wrong and how to fix it.
 - Install, uninstall and restore are tested in CI against an isolated Claude config.
-- Honest compatibility: tested on Windows 11; Windows 10 expected, not yet tested.
+- Compatibility table: tested on Windows 11; Windows 10 expected to work, not yet tested.
+- Privacy, support and terms pages; listing metadata and icon.
 
 ## 0.3.1
 
-- Public-ready repository: README for everyday users, architecture, compatibility and
-  security notes, CI.
+- Repository prepared for publication: plain-language README, architecture, compatibility
+  and security notes, CI.
 - The installer requires PowerShell 7.
 
 ## 0.3.0
