@@ -21,6 +21,7 @@ import { shortcutOf } from './shortcut'
 
 type Phase = 'idle' | 'recording' | 'transcribing' | 'error'
 export type TransportKey = 'f11' | 'escape'
+type Mic = 'on' | 'off' | 'unknown'
 export const TRANSPORT_KEYS: readonly TransportKey[] = ['f11', 'escape']
 export const COMMAND = 'dictate'
 
@@ -37,6 +38,8 @@ const HEARD_MS = 1500
 // the transcript): it must stay empty this many looks, this far apart, to be a cancel.
 const CONFIRM_MS = 600
 const CONFIRM_LOOKS = 2
+// With the microphone already released, one short look is enough to rule out a send.
+const MIC_CONFIRM_MS = 200
 // Claude Code's voice stops by itself after 15 s of silence. With no word for longer
 // than that, it is not recording any more (silence, or an Esc before the first word,
 // which DictateCLI cannot see): the card goes back to idle and the draft comes back.
@@ -86,6 +89,19 @@ async function press($: EngineInterface, key: TransportKey) {
     return exitCode === 0
   } catch {
     return false
+  }
+}
+
+// Is Claude Code using the microphone right now? Windows records it per app (the tray
+// mic icon); the helper reads it for its parent, read-only. While recording with no
+// word on screen this is the only sign that an Esc cancelled Claude Code's voice.
+async function micState($: EngineInterface): Promise<Mic> {
+  try {
+    const helper = `${$.plugin.root}/bin/dictate-key.exe`
+    const { exitCode } = await $.process.run([helper, 'mic'], { timeoutMs: 5000 })
+    return exitCode === 10 ? 'on' : exitCode === 11 ? 'off' : 'unknown'
+  } catch {
+    return 'unknown'
   }
 }
 
@@ -167,14 +183,34 @@ async function isCancelledNatively($: EngineInterface, id: number) {
 // live transcript vanish and gives the draft back.
 async function watchRecording($: EngineInterface, id: number) {
   let hasText = false
+  let isMicSeen = false
   const since = await $.clock.now()
   while (run === id && phase === 'recording') {
     await $.clock.sleep(POLL_MS)
     if (run !== id || phase !== 'recording') return
     const { text } = await $.prompt.read()
-    if (text !== '') hasText = true
-    else if (hasText && (await isCancelledNatively($, id)) && phase === 'recording') return restore($)
-    else if (!hasText && (await $.clock.now()) - since > NO_SPEECH_MS && run === id && phase === 'recording') return restore($)
+    if (text !== '') {
+      hasText = true
+      continue
+    }
+    if (hasText) {
+      // The live transcript vanished: Esc after speaking (or Claude Code sent it, which
+      // its prompt.submit hook would mark by bumping `run` within a moment). A released
+      // microphone confirms the cancel at once; otherwise look again, as before.
+      if ((await micState($)) === 'off') {
+        await $.clock.sleep(MIC_CONFIRM_MS)
+        if (run === id && phase === 'recording' && (await $.prompt.read()).text === '') return restore($)
+        continue
+      }
+      if ((await isCancelledNatively($, id)) && phase === 'recording') return restore($)
+      continue
+    }
+    // No word yet: the microphone tells whether Claude Code still listens.
+    const mic = await micState($)
+    if (run !== id || phase !== 'recording') return
+    if (mic === 'on') isMicSeen = true
+    else if (mic === 'off' && isMicSeen) return restore($) // Esc before the first word
+    if ((await $.clock.now()) - since > NO_SPEECH_MS && run === id && phase === 'recording') return restore($)
   }
 }
 

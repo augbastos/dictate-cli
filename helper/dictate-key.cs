@@ -1,9 +1,14 @@
-// dictate-key: writes ONE fixed key press into the console of the parent process
-// (Claude Code), so the mod can trigger Claude Code's own voice keybinding.
-// Accepts only "f11" (bound to voice:pushToTalk) or "escape"; never the user's DictateCLI
-// shortcut, so a toggle cannot trigger itself.
+// dictate-key: the DictateCLI helper. Two jobs, each a fixed argument:
+//   "f11" / "escape": write ONE key press into the console of the parent process
+//     (Claude Code): F11 is bound to voice:pushToTalk, Esc is Claude Code's voice cancel.
+//     Never the user's DictateCLI shortcut, so a toggle cannot trigger itself.
+//   "mic": read-only; is the parent's executable using the microphone right now?
+//     Windows records this per app (the tray mic icon): LastUsedTimeStop is 0 while in
+//     use. Exit 10 = in use, 11 = not in use, 12 = unknown.
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 static class DictateKey
 {
@@ -19,10 +24,22 @@ static class DictateKey
         [FieldOffset(16)] public uint ControlKeyState;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    struct ProcessBasicInformation
+    {
+        public IntPtr ExitStatus;
+        public IntPtr PebBaseAddress;
+        public IntPtr AffinityMask;
+        public IntPtr BasePriority;
+        public IntPtr UniqueProcessId;
+        public IntPtr InheritedFromUniqueProcessId;
+    }
+
     const int AttachParentProcess = -1;
     const uint GenericReadWrite = 0xC0000000;
     const uint ShareReadWrite = 3;
     const uint OpenExisting = 3;
+    const string MicStore = @"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged\";
 
     [DllImport("kernel32.dll")] static extern bool FreeConsole();
     [DllImport("kernel32.dll")] static extern bool AttachConsole(int processId);
@@ -31,12 +48,17 @@ static class DictateKey
     [DllImport("kernel32.dll", SetLastError = true)]
     static extern bool WriteConsoleInputW(IntPtr input, KeyRecord[] records, uint count, out uint written);
     [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
+    [DllImport("ntdll.dll")]
+    static extern int NtQueryInformationProcess(IntPtr process, int infoClass, ref ProcessBasicInformation info, int size, out int returned);
 
     static int Main(string[] args)
     {
+        string arg = args.Length == 1 ? args[0] : "";
+        if (arg == "mic") return MicInUse();
+
         ushort vk;
         char ch;
-        switch (args.Length == 1 ? args[0] : "")
+        switch (arg)
         {
             case "f11": vk = 0x7A; ch = '\0'; break;
             case "escape": vk = 0x1B; ch = (char)27; break;
@@ -61,5 +83,26 @@ static class DictateKey
         bool ok = WriteConsoleInputW(input, records, 2, out written);
         CloseHandle(input);
         return ok && written == 2 ? 0 : 4;
+    }
+
+    static int MicInUse()
+    {
+        try
+        {
+            var info = new ProcessBasicInformation();
+            int returned;
+            if (NtQueryInformationProcess(Process.GetCurrentProcess().Handle, 0, ref info, Marshal.SizeOf(info), out returned) != 0) return 12;
+            string exe = Process.GetProcessById(info.InheritedFromUniqueProcessId.ToInt32()).MainModule.FileName;
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(MicStore + exe.Replace('\\', '#')))
+            {
+                object stop = key == null ? null : key.GetValue("LastUsedTimeStop");
+                if (stop == null) return 12;
+                return Convert.ToInt64(stop) == 0 ? 10 : 11;
+            }
+        }
+        catch
+        {
+            return 12;
+        }
     }
 }

@@ -9,7 +9,7 @@ import { shortcutOf } from './shortcut'
 // A stand-in for Claude Code beneath the mod: the prompt box, the voice keybinding
 // in tap mode on F11 (starts on an empty box, stops, Esc cancels and empties the box),
 // the live transcript while recording, and what got sent.
-type Native = { transcript: string; interim?: string; helperFails?: boolean; transcribeMs?: number }
+type Native = { transcript: string; interim?: string; helperFails?: boolean; transcribeMs?: number; micUnknown?: boolean }
 
 function fakeClaude($: Engine, on: On, native: Native, draft = '') {
   const clock = mock.clock(on)
@@ -52,10 +52,13 @@ function fakeClaude($: Engine, on: On, native: Native, draft = '') {
   }
   on('process.run', (_, e) => {
     const key = e.argv[1]
-    state.keys.push(key)
-    state.log.push(`key:${key}`)
+    if (key !== 'mic') {
+      state.keys.push(key)
+      state.log.push(`key:${key}`)
+    }
     const ok = { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false }
     if (native.helperFails) return { value: { ...ok, exitCode: 2 } }
+    if (key === 'mic') return { value: { ...ok, exitCode: native.micUnknown ? 12 : state.isRecording ? 10 : 11 } }
     if (key === 'escape') esc()
     else if (key !== 'f11') return { value: { ...ok, exitCode: 64 } } // the helper refuses anything else
     else if (!state.isRecording) {
@@ -393,8 +396,33 @@ describe('keyboard specifics', () => {
 })
 
 describe('Esc before the first word', () => {
-  test('Claude Code cancels, DictateCLI cannot see it: the card goes idle and the draft comes back once the voice has surely stopped', async ($, on) => {
+  test('the mic is released: the card goes idle at once and the draft comes back', async ($, on) => {
     const { clock, state, esc } = fakeClaude($, on, { transcript: '' }, 'meu rascunho')
+    const ui = await mountBand($)
+    await ui.press({ key: 'mic' })
+    await clock.advance(600) // the mic is seen in use
+    esc()
+    await clock.advance(600)
+    expect(await ui.find({ key: 'cancel' })).toBeUndefined()
+    expect(state.box).toBe('meu rascunho')
+    expect(state.sent).toEqual([])
+    expect(state.keys).toEqual(['f11'])
+  })
+
+  test('Esc after speaking: the released mic closes the card in well under a second', async ($, on) => {
+    const { clock, state, esc } = fakeClaude($, on, { transcript: 'never', interim: 'never' }, 'rascunho')
+    const ui = await mountBand($)
+    await ui.press({ key: 'mic' })
+    await clock.advance(1000)
+    esc()
+    await clock.advance(700)
+    expect(await ui.find({ key: 'cancel' })).toBeUndefined()
+    expect(state.box).toBe('rascunho')
+    expect(state.sent).toEqual([])
+  })
+
+  test('mic state unknown: the card goes idle once the voice has surely stopped (16 s)', async ($, on) => {
+    const { clock, state, esc } = fakeClaude($, on, { transcript: '', micUnknown: true }, 'meu rascunho')
     const ui = await mountBand($)
     await ui.press({ key: 'mic' })
     esc()
