@@ -45,6 +45,7 @@ jobs:
           }
           & .\bin\dictate-key.exe mic
           if ($LASTEXITCODE -notin 10, 11, 12) { throw "mic query exit $LASTEXITCODE" }
+          exit 0 # the checks above passed; the helper's own exit code is not the step's
       - name: Install Claude Code
         run: npm install -g @anthropic-ai/claude-code
       - name: Plugin manifest and module validate
