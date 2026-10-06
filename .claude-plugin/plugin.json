@@ -1,6 +1,6 @@
 {
   "name": "dictate-cli",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "DictateCLI: voice dictation for Claude Code. Clickable voice dictation in the terminal UI on Claude's native voice backend: start, stop and send, or cancel.",
   "author": { "name": "Augusto Bastos" },
   "license": "MIT",
