@@ -5,6 +5,8 @@
 DictateCLI adds a microphone button to Claude Code, using Claude Code's own native
 voice dictation.
 
+![DictateCLI: click the mic, speak, click Send, and Claude gets the prompt](docs/demo.svg)
+
 **Click. Speak. Send.**
 
 Windows 10/11 · Claude Code native voice · No extra API key · MIT

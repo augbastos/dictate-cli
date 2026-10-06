@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="240" viewBox="0 0 760 240" role="img" aria-labelledby="t d">
+  <title id="t">DictateCLI demo</title>
+  <desc id="d">Claude Code with the DictateCLI microphone button. Click the mic, speak, the words appear in the prompt, click Send, and Claude receives the prompt.</desc>
+  <defs>
+    <linearGradient id="live" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff7a59"><animate attributeName="stop-color" values="#ff7a59;#c084fc;#38bdf8;#ff7a59" dur="2s" repeatCount="indefinite"/></stop>
+      <stop offset="1" stop-color="#38bdf8"><animate attributeName="stop-color" values="#38bdf8;#ff7a59;#c084fc;#38bdf8" dur="2s" repeatCount="indefinite"/></stop>
+    </linearGradient>
+    <clipPath id="speak"><rect x="40" y="186" height="26" width="0">
+      <animate attributeName="width" values="0;0;470;470;0;0" keyTimes="0;0.24;0.62;0.79;0.8;1" dur="9s" repeatCount="indefinite"/>
+    </rect></clipPath>
+    <symbol id="mic" viewBox="0 0 16 16">
+      <rect x="5" y="1" width="6" height="9" rx="3" fill="currentColor"/>
+      <path d="M3 7.5a5 5 0 0 0 10 0M8 12.5V15M5.5 15h5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+
+  <style>
+    text { font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 14px; }
+  </style>
+
+  <!-- window -->
+  <rect x="0.5" y="0.5" width="759" height="239" rx="10" fill="#16171d" stroke="#2a2c36"/>
+  <circle cx="20" cy="18" r="5" fill="#ff5f57"/><circle cx="38" cy="18" r="5" fill="#febc2e"/><circle cx="56" cy="18" r="5" fill="#28c840"/>
+  <text x="380" y="22" text-anchor="middle" fill="#6b7080" font-size="12">claude</text>
+
+  <!-- transcript: the prompt Claude received -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.8;0.82;1" dur="9s" repeatCount="indefinite"/>
+    <rect x="20" y="52" width="720" height="26" rx="3" fill="#24262f"/>
+    <text x="30" y="70" fill="#e6e6e6">❯ fix the failing parser test and explain why it broke</text>
+    <text x="30" y="102" fill="#d97757">●</text><text x="48" y="102" fill="#9aa0ad">Looking at the parser test…</text>
+  </g>
+
+  <!-- band above the prompt: idle card -->
+  <g color="#9aa0ad">
+    <animate attributeName="opacity" values="1;1;0;0;1;1" keyTimes="0;0.22;0.23;0.79;0.8;1" dur="9s" repeatCount="indefinite"/>
+    <rect x="690" y="124" width="48" height="38" rx="9" fill="none" stroke="#4a4e5c"/>
+    <use href="#mic" x="704" y="133" width="20" height="20"/>
+  </g>
+
+  <!-- band above the prompt: recording card -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.22;0.23;0.69;0.7;1" dur="9s" repeatCount="indefinite"/>
+    <rect x="420" y="124" width="318" height="38" rx="9" fill="none" stroke="#e5484d"/>
+    <text x="438" y="148" fill="#e5484d">●</text>
+    <text x="456" y="148" fill="#e5484d" opacity="0">0:01<animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.23;0.24;0.36;0.37;1" dur="9s" repeatCount="indefinite"/></text>
+    <text x="456" y="148" fill="#e5484d" opacity="0">0:02<animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.37;0.38;0.5;0.51;1" dur="9s" repeatCount="indefinite"/></text>
+    <text x="456" y="148" fill="#e5484d" opacity="0">0:03<animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.51;0.52;0.69;0.7;1" dur="9s" repeatCount="indefinite"/></text>
+    <text x="528" y="148" fill="#7c8190">× Cancel</text>
+    <g color="#e6e6e6"><use href="#mic" x="632" y="133" width="20" height="20"/></g>
+    <text x="660" y="148" fill="#e6e6e6">Send</text>
+  </g>
+
+  <!-- band: transcribing -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.69;0.7;0.79;0.8;1" dur="9s" repeatCount="indefinite"/>
+    <rect x="590" y="124" width="148" height="38" rx="9" fill="none" stroke="#4a4e5c"/>
+    <text x="606" y="148" fill="#7c8190">Transcribing…</text>
+  </g>
+
+  <!-- prompt row -->
+  <line x1="20" y1="174" x2="740" y2="174" stroke="#2a2c36"/>
+  <text x="24" y="204" fill="#9aa0ad">❯</text>
+  <text x="40" y="204" fill="url(#live)" clip-path="url(#speak)">fix the failing parser test and explain why it broke</text>
+  <g>
+    <animate attributeName="opacity" values="1;1;0;0;1;1" keyTimes="0;0.22;0.23;0.79;0.8;1" dur="9s" repeatCount="indefinite"/>
+    <rect x="40" y="190" width="8" height="18" fill="#9aa0ad">
+      <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  <line x1="20" y1="222" x2="740" y2="222" stroke="#2a2c36"/>
+
+  <!-- pointer: on the mic, then on Send -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0;0;1;1;0;0" keyTimes="0;0.12;0.13;0.23;0.24;0.6;0.61;0.7;0.71;1" dur="9s" repeatCount="indefinite"/>
+    <animateTransform attributeName="transform" type="translate" values="718 150;718 150;666 152;666 152" keyTimes="0;0.5;0.51;1" dur="9s" repeatCount="indefinite"/>
+    <path d="M0 0 L0 15 L4 11 L7 18 L9 17 L6 10 L11 10 Z" fill="#ffffff" stroke="#16171d" stroke-width="1"/>
+  </g>
+</svg>
