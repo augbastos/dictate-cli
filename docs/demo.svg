@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="760" height="240" viewBox="0 0 760 240" role="img" aria-labelledby="t d">
-  <title id="t">DictateCLI demo</title>
+  <title id="t">DictateCLI demo (illustration)</title>
   <desc id="d">Claude Code with the DictateCLI microphone button. Click the mic, speak, the words appear in the prompt, click Send, and Claude receives the prompt.</desc>
   <defs>
     <linearGradient id="live" x1="0" y1="0" x2="1" y2="0">
@@ -21,8 +21,8 @@
 
   <!-- window -->
   <rect x="0.5" y="0.5" width="759" height="239" rx="10" fill="#16171d" stroke="#2a2c36"/>
-  <circle cx="20" cy="18" r="5" fill="#ff5f57"/><circle cx="38" cy="18" r="5" fill="#febc2e"/><circle cx="56" cy="18" r="5" fill="#28c840"/>
-  <text x="380" y="22" text-anchor="middle" fill="#6b7080" font-size="12">claude</text>
+  <line x1="0.5" y1="34" x2="759.5" y2="34" stroke="#2a2c36"/>
+  <text x="20" y="22" fill="#6b7080" font-size="12">Claude Code</text>
 
   <!-- transcript: the prompt Claude received -->
   <g opacity="0">

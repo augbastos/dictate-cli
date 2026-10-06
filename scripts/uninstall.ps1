@@ -5,8 +5,9 @@
   renderer and F9 / F11 / Space binding values recorded before the first install.
 #>
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'common.ps1')
 
-$claudeDir = Join-Path $HOME '.claude'
+$claudeDir = Get-ClaudeDir
 $settingsPath = Join-Path $claudeDir 'settings.json'
 $keysPath = Join-Path $claudeDir 'keybindings.json'
 $previousPath = Join-Path $claudeDir 'backups\dictate-cli-previous.json'
@@ -43,7 +44,18 @@ if (Test-Path $settingsPath) {
         $configs.Value.PSObject.Properties.Remove('dictate-cli@dictate-cli')
         if (@($configs.Value.PSObject.Properties).Count -eq 0) { $settings.PSObject.Properties.Remove('pluginConfigs') }
     }
-    Write-JsonAtomic $settings $settingsPath 100
+    # Claude Code's plugin uninstall can leave its own bookkeeping keys empty.
+    foreach ($name in 'enabledPlugins', 'extraKnownMarketplaces') {
+        $value = $settings.PSObject.Properties[$name]?.Value
+        if ($value -is [pscustomobject] -and @($value.PSObject.Properties).Count -eq 0 -and $previous.pluginKeys -eq $false) {
+            $settings.PSObject.Properties.Remove($name)
+        }
+    }
+    if ($previous.settingsFile -eq $false -and @($settings.PSObject.Properties).Count -eq 0) {
+        Remove-Item $settingsPath # there was no settings.json before DictateCLI
+    } else {
+        Write-JsonAtomic $settings $settingsPath 100
+    }
 }
 
 if (Test-Path $keysPath) {
@@ -59,7 +71,8 @@ if (Test-Path $keysPath) {
             $keys.bindings = @($keys.bindings | Where-Object { $_ -ne $chat })
         }
     }
-    if (@($keys.bindings).Count -eq 0 -and @($keys.PSObject.Properties).Count -eq 1) {
+    $wasThere = $previous.PSObject.Properties['keysFile'] -and $previous.keysFile
+    if (-not $wasThere -and @($keys.bindings).Count -eq 0 -and @($keys.PSObject.Properties).Count -eq 1) {
         Remove-Item $keysPath # DictateCLI created it
     } else {
         Write-JsonAtomic $keys $keysPath 20

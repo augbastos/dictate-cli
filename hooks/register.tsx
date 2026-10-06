@@ -2,12 +2,14 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { merge } from './merge'
 import { shortcutOf } from './shortcut'
+import { helperArgv, micFrom } from './transport'
+import type { Mic, TransportKey } from './transport'
 
 // DictateCLI: voice dictation for Claude Code. A card above the prompt (and an
 // optional key bound to `command:dictate`) drive Claude Code's own voice dictation
 // (`/voice`, tap mode). Both inputs call the same toggle() and cancel(). The
-// speech-to-text is Claude Code's; DictateCLI keeps what you had typed, sends once,
-// and draws the state.
+// speech-to-text is Claude Code's; DictateCLI sets aside what you had typed (it comes
+// back after the send), sends the dictation once, and draws the state.
 //
 // Two keys, never the same one:
 // - USER SHORTCUT: a key bound to `command:dictate` runs /dictate, which calls
@@ -20,9 +22,6 @@ import { shortcutOf } from './shortcut'
 // user shortcut again (no shortcut → DictateCLI → shortcut loop).
 
 type Phase = 'idle' | 'recording' | 'transcribing' | 'error'
-export type TransportKey = 'f11' | 'escape'
-type Mic = 'on' | 'off' | 'unknown'
-export const TRANSPORT_KEYS: readonly TransportKey[] = ['f11', 'escape']
 export const COMMAND = 'dictate'
 const SETTINGS_PANE = 'dictate-cli-settings'
 
@@ -90,8 +89,7 @@ function elapsed(now: number) {
 
 async function press($: EngineInterface, key: TransportKey) {
   try {
-    const helper = `${$.plugin.root}/bin/dictate-key.exe`
-    const { exitCode } = await $.process.run([helper, key], { timeoutMs: 5000 })
+    const { exitCode } = await $.process.run(helperArgv($.plugin.root, key), { timeoutMs: 5000 })
     return exitCode === 0
   } catch {
     return false
@@ -103,9 +101,8 @@ async function press($: EngineInterface, key: TransportKey) {
 // word on screen this is the only sign that an Esc cancelled Claude Code's voice.
 async function micState($: EngineInterface): Promise<Mic> {
   try {
-    const helper = `${$.plugin.root}/bin/dictate-key.exe`
-    const { exitCode } = await $.process.run([helper, 'mic'], { timeoutMs: 5000 })
-    return exitCode === 10 ? 'on' : exitCode === 11 ? 'off' : 'unknown'
+    const { exitCode } = await $.process.run(helperArgv($.plugin.root, 'mic'), { timeoutMs: 5000 })
+    return micFrom(exitCode)
   } catch {
     return 'unknown'
   }
@@ -405,7 +402,7 @@ export const register: Register = (on, options) => {
   })
 
   // A bordered card at the right of the band right above the prompt (no site draws
-  // inside the prompt row), as present as AFKSwitch's switch. Whatever other plugins
+  // inside the prompt row). Whatever other plugins
   // draw in the band stays, to the left.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     isWorking = e.props.isWorking
@@ -459,7 +456,7 @@ export const register: Register = (on, options) => {
       </Box>
     )
 
-    // Another plugin's tree beneath us (e.g. AFKSwitch drawn below DictateCLI): one row.
+    // Another plugin's tree beneath us in the band: one row, its card then ours.
     const isBottom = others === null || others === undefined || (others as { type?: unknown }).type === 'engine'
     if (!isBottom) {
       return (
@@ -471,7 +468,7 @@ export const register: Register = (on, options) => {
       )
     }
     // We are the bottom of the chain. With `beside`, a plugin drawn above us in the
-    // band (AFKSwitch) shares our rows instead of stacking under the card: the card's
+    // band shares our rows instead of stacking under the card: the card's
     // own Box pulls the next sibling up (a Box clips what overflows it, so the margin
     // sits on the outermost Box). The engine's node is left out there: under a Box
     // with a margin it is refused, and with no survey (checked above) it draws nothing.

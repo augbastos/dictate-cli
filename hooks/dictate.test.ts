@@ -3,7 +3,8 @@ import type { Engine } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
 import { merge } from './merge'
-import { COMMAND, KEY_QUIET_MS, NO_SPEECH_MS, TRANSPORT_KEYS } from './register'
+import { COMMAND, KEY_QUIET_MS, NO_SPEECH_MS } from './register'
+import { TRANSPORT_KEYS } from './transport'
 import { shortcutOf } from './shortcut'
 
 // A stand-in for Claude Code beneath the mod: the prompt box, the voice keybinding

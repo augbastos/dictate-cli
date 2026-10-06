@@ -9,10 +9,11 @@
 .PARAMETER NoFullscreen
   Leave the renderer alone (the card is then not clickable; /dictate still works).
 .PARAMETER Beside
-  Set DictateCLI's `beside` option: share the band row with another plugin's card (AFKSwitch).
+  Set DictateCLI's `beside` option: share the row above the prompt with another plugin's card.
 .PARAMETER Shortcut
   The key for /dictate: alt+d (default) or disabled. Other chords can be bound by hand to
-  `command:dictate` in ~/.claude/keybindings.json (context Chat). Function keys are refused: Claude Code 2.1.289/2.1.290 never routes them to its keybindings (tested).
+  `command:dictate` in ~/.claude/keybindings.json (context Chat). Function keys are refused:
+  Claude Code does not route them to its keybindings.
   The Application/Menu key is refused: Claude Code has no name for it. DictateCLI never
   installs a global keyboard hook.
 #>
@@ -23,7 +24,7 @@ switch ($Shortcut.Trim().ToLowerInvariant()) {
     'alt+d' { $userKey = 'alt+d' }
     'disabled' { $userKey = $null }
     { $_ -match '^(ctrl\+|shift\+|alt\+)*f([1-9]|1[0-2])$' } {
-        throw "Function keys cannot be a DictateCLI shortcut: Claude Code never routes them to its keybindings (tested on 2.1.289 and 2.1.290). Nothing was changed."
+        throw "Function keys cannot be a DictateCLI shortcut: Claude Code does not route them to its keybindings. Nothing was changed."
     }
     { $_ -in 'apps', 'menu', 'application' } {
         throw 'The Application/Menu key cannot be a DictateCLI shortcut: Claude Code does not receive it from the terminal. Nothing was changed.'
@@ -35,7 +36,17 @@ switch ($Shortcut.Trim().ToLowerInvariant()) {
 $transportKey = 'f11'
 
 $repo = Split-Path -Parent $PSScriptRoot
-$claudeDir = Join-Path $HOME '.claude'
+. (Join-Path $PSScriptRoot 'common.ps1')
+
+# 0. Preflight: nothing is touched unless every check passes.
+$problems = @(Get-PreflightProblems $repo)
+if ($problems.Count -gt 0) {
+    $problems | ForEach-Object { Write-Host $_ }
+    Write-Host 'Nothing was changed.'
+    exit 1
+}
+
+$claudeDir = Get-ClaudeDir
 $settingsPath = Join-Path $claudeDir 'settings.json'
 $keysPath = Join-Path $claudeDir 'keybindings.json'
 $backups = Join-Path $claudeDir 'backups'
@@ -56,6 +67,12 @@ function Value-Of($object, $name) {
     if ($property) { @{ present = $true; value = $property.Value } } else { @{ present = $false } }
 }
 
+$hadSettings = Test-Path $settingsPath
+$hadKeys = Test-Path $keysPath
+# Claude Code's plugin install adds these; its uninstall leaves them behind empty.
+$initial = Read-Json $settingsPath ([pscustomobject]@{})
+$hadPluginKeys = [bool]($initial.PSObject.Properties['enabledPlugins'] -or $initial.PSObject.Properties['extraKnownMarketplaces'])
+
 # 1. Back up what we touch.
 New-Item -ItemType Directory -Force $backup | Out-Null
 foreach ($file in $settingsPath, $keysPath) {
@@ -64,8 +81,7 @@ foreach ($file in $settingsPath, $keysPath) {
 Write-Host "Backup: $backup"
 
 # 2. Build the helper with the C# compiler that ships with Windows (.NET Framework 4).
-$csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-if (-not (Test-Path $csc)) { throw "C# compiler not found at $csc" }
+$csc = Get-Csc
 New-Item -ItemType Directory -Force (Join-Path $repo 'bin') | Out-Null
 & $csc -nologo -optimize "-out:$(Join-Path $repo 'bin\dictate-key.exe')" (Join-Path $repo 'helper\dictate-key.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Building the helper failed' }
@@ -94,6 +110,9 @@ $chat = @($keys.bindings) | Where-Object { $_.context -eq 'Chat' } | Select-Obje
 
 if (-not (Test-Path $previousPath)) {
     $previous = [ordered]@{
+        settingsFile = $hadSettings
+        keysFile  = $hadKeys
+        pluginKeys = $hadPluginKeys
         voice     = Value-Of $settings 'voice'
         tui       = Value-Of $settings 'tui'
         chatBlock = [bool]$chat
@@ -159,4 +178,4 @@ elseif ($chat.bindings.PSObject.Properties['f9'] -and $chat.bindings.f9 -in 'com
 }
 Write-JsonAtomic $keys $keysPath 20
 
-Write-Host 'DictateCLI installed. Open a new Claude Code session (or /reload-plugins) and look for the DictateCLI card above the prompt; /dictate toggles it too.'
+Write-Host 'DictateCLI installed. Restart Claude Code: the microphone appears above the prompt.'

@@ -5,11 +5,12 @@
 DictateCLI adds a microphone button to Claude Code, using Claude Code's own native
 voice dictation.
 
-![DictateCLI: click the mic, speak, click Send, and Claude gets the prompt](docs/demo.svg)
+![DictateCLI illustration: click the mic, speak, click Send, and Claude gets the prompt](docs/demo.svg)
+<sub>Illustration of the flow, not a screen recording.</sub>
 
 **Click. Speak. Send.**
 
-Windows 10/11 · Claude native voice · No extra API key · MIT
+Windows · Claude native voice · No extra API key · MIT
 
 ## Install
 
@@ -21,8 +22,10 @@ pwsh -File scripts\install.ps1
 
 Restart Claude Code. The microphone appears above the prompt.
 
-Windows 10/11 x64. Requires Claude Code voice dictation, a microphone and
+Requires Claude Code (2.1.287+) with voice dictation, a microphone and
 [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows).
+The installer checks these first and changes nothing if one is missing.
+`pwsh -File scripts\doctor.ps1` tells you if anything is off.
 
 ## Use
 
@@ -59,9 +62,8 @@ feature, through Anthropic.
 
 ## Compatibility
 
-Current release: **Windows 10/11 x64**
-
-Tested with Claude Code in the VS Code integrated terminal, in fullscreen mode.
+Tested on **Windows 11 x64**, with Claude Code in the VS Code integrated terminal.
+Windows 10 x64 is expected to work but not yet tested.
 DictateCLI runs inside Claude Code, so it is not tied to a specific editor.
 
 macOS and Linux are not supported in this release. Details:
@@ -77,6 +79,8 @@ macOS and Linux are not supported in this release. Details:
 - **Wrong language.** Set Claude Code's language in `/config`.
 - **Alt+D does nothing.** Run the installer again, then restart Claude Code.
 - **"Could not reach Claude Code voice."** Run the installer again.
+- **Anything else.** Run `pwsh -File scripts\doctor.ps1`; it names what is wrong and
+  how to fix it.
 
 </details>
 

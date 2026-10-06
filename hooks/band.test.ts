@@ -9,11 +9,11 @@ for (const beneath of ['plugin', 'engine'] as const) {
     on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
       if (beneath === 'engine') return { type: 'engine', ref: 1 } as never
       const { Box, Text } = $.ui.resolve(e)
-      return h(Box, { borderStyle: 'single', paddingX: 1 }, h(Text, {}, 'AFK'))
+      return h(Box, { borderStyle: 'single', paddingX: 1 }, h(Text, {}, 'Other'))
     })
     const ui = await $.ui.mount({ plugin: 'dictate-cli', surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
     expect(await ui.find({ key: 'mic' })).toBeDefined()
     expect(await ui.find({ text: /DictateCLI/ })).toBeDefined()
-    if (beneath === 'plugin') expect(await ui.find({ text: 'AFK' })).toBeDefined()
+    if (beneath === 'plugin') expect(await ui.find({ text: 'Other' })).toBeDefined()
   })
 }

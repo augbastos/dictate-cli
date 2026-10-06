@@ -1,7 +1,7 @@
 {
   "name": "dictate-cli",
-  "version": "0.3.1",
-  "description": "DictateCLI: voice dictation for Claude Code. Clickable voice dictation in the terminal UI on Claude's native voice backend: start, stop and send, or cancel.",
+  "version": "0.3.2",
+  "description": "Speak to Claude Code instead of typing: a microphone button for Claude Code's native voice dictation.",
   "author": { "name": "Augusto Bastos" },
   "license": "MIT",
   "userConfig": {
@@ -14,8 +14,8 @@
     },
     "beside": {
       "type": "boolean",
-      "title": "Share the row with another band plugin",
-      "description": "On when another plugin (e.g. AFKSwitch) draws a 3-row card in the band above DictateCLI's: the two sit side by side instead of stacking. Leave off otherwise.",
+      "title": "Share the row with another plugin",
+      "description": "Turn on when another plugin draws a card in the same row above the prompt, so the two sit side by side instead of stacking.",
       "default": false
     }
   }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2
+
+- The installer checks Windows, PowerShell 7, the Claude Code version (2.1.287+) and
+  the C# compiler first, and changes nothing if one is missing.
+- `scripts/doctor.ps1`: read-only check that says what is wrong and how to fix it.
+- Install, uninstall and restore are tested in CI against an isolated Claude config.
+- Honest compatibility: tested on Windows 11; Windows 10 expected, not yet tested.
+
 ## 0.3.1
 
 - Public-ready repository: README for everyday users, architecture, compatibility and

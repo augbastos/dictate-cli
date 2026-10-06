@@ -52,6 +52,12 @@ jobs:
         run: claude plugin validate .
       - name: Plugin tests
         run: claude plugin test .
+      - name: Installer preflight refuses an old Claude Code and changes nothing
+        shell: pwsh
+        run: ./tests/preflight.ps1
+      - name: Install, uninstall and restore leave the user's config as it was
+        shell: pwsh
+        run: ./tests/install-rollback.ps1
       - name: Build output stays untracked
         shell: pwsh
         run: if (git status --porcelain) { git status; throw 'working tree changed' }
