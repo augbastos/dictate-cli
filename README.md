@@ -5,8 +5,8 @@
 DictateCLI adds a microphone button to Claude Code, using Claude Code's own native
 voice dictation.
 
-![DictateCLI illustration: click the mic, speak, click Send, and Claude gets the prompt](docs/demo.svg)
-<sub>Illustration of the flow, not a screen recording.</sub>
+![DictateCLI: click the mic, speak, click Send, and Claude gets the prompt](docs/demo.gif)
+<sub>Simulated animation of the flow, not a screen recording.</sub>
 
 **Click. Speak. Send.**
 
