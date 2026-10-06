@@ -100,6 +100,16 @@ function withDraft(typed: string) {
   return /\s$/.test(base) ? base + typed : `${base} ${typed}`
 }
 
+// A click on the card makes the band above the prompt take the keyboard; there Esc
+// only leaves the band and never reaches Claude Code's voice cancel. The band lets go
+// as soon as the prompt's text changes, so change it and put it back: the keyboard
+// returns to the prompt through the official prompt API, with no key injected.
+async function releaseKeyboard($: EngineInterface) {
+  const { text } = await $.prompt.read()
+  await $.prompt.fill({ text: `${text} ` })
+  await $.prompt.fill({ text })
+}
+
 async function restore($: EngineInterface) {
   run++
   show($, 'idle')
@@ -166,6 +176,7 @@ async function startRecording($: EngineInterface) {
   if (base !== '' && !(await $.prompt.fill({ text: '' })).isFilled) {
     return fail($, 'the prompt is busy')
   }
+  if (base === '') await releaseKeyboard($) // a non-empty draft just changed already
   if (!(await press($, 'f11'))) {
     return fail($, 'could not reach Claude Code voice; run scripts/install.ps1')
   }
@@ -221,6 +232,7 @@ async function cancel($: EngineInterface) {
   // turn runs, an Esc that Claude Code's voice does not take would interrupt the turn:
   // then Esc goes only when the live transcript shows Claude Code is listening.
   const isListening = (await $.prompt.read()).text !== ''
+  await releaseKeyboard($) // a click on Cancel put the keyboard in the band: Esc must reach the voice
   const isCancelled = !isWorking || isListening ? await press($, 'escape') : false
   await $.clock.sleep(KEY_GAP_MS)
   await $.prompt.fill({ text: withDraft((await $.prompt.read()).text) })

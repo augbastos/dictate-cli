@@ -20,12 +20,14 @@ function fakeClaude($: Engine, on: On, native: Native, draft = '') {
     keys: [] as string[],
     sent: [] as string[],
     commandRuns: 0,
+    log: [] as string[], // fills and keys, in order
   }
 
   on('ui.render', { component: 'AbovePrompt' }, () => ({ type: 'engine', ref: 1 }) as never)
   on('prompt.read', () => ({ value: { text: state.box, cursor: state.box.length } }))
   on('ui.toast', () => ({ value: undefined }))
   on('prompt.fill', (_, e) => {
+    state.log.push(`fill:${JSON.stringify(e.text)}`)
     state.box = e.mode === 'append' ? state.box + e.text : e.text
     return { isFilled: true }
   })
@@ -51,6 +53,7 @@ function fakeClaude($: Engine, on: On, native: Native, draft = '') {
   on('process.run', (_, e) => {
     const key = e.argv[1]
     state.keys.push(key)
+    state.log.push(`key:${key}`)
     const ok = { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false }
     if (native.helperFails) return { value: { ...ok, exitCode: 2 } }
     if (key === 'escape') esc()
@@ -384,6 +387,37 @@ describe('keyboard specifics', () => {
     await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true } as never)
     const ui = await mountBand($)
     expect(await ui.find({ text: 'F9' })).toBeDefined()
+  })
+})
+
+describe('focus after a click', () => {
+  test('start by click on an empty prompt: the prompt text changes and comes back before F11 (the band lets go)', async ($, on) => {
+    const { state } = fakeClaude($, on, { transcript: '' })
+    const ui = await mountBand($)
+    await ui.press({ key: 'mic' })
+    expect(state.log).toEqual(['fill:" "', 'fill:""', 'key:f11'])
+    expect(state.box).toBe('')
+  })
+
+  test('start by click with a draft: emptying the prompt is the change', async ($, on) => {
+    const { state } = fakeClaude($, on, { transcript: '' }, 'rascunho')
+    const ui = await mountBand($)
+    await ui.press({ key: 'mic' })
+    expect(state.log).toEqual(['fill:""', 'key:f11'])
+  })
+
+  test('Cancel click: keyboard released before Esc goes to the voice', async ($, on) => {
+    const { clock, state } = fakeClaude($, on, { transcript: 'nunca', interim: 'nunca' }, 'rascunho')
+    const ui = await mountBand($)
+    await ui.press({ key: 'mic' })
+    await clock.advance(1000)
+    state.log.length = 0
+    const cancelling = ui.press({ key: 'cancel' })
+    await clock.advance(1000)
+    await cancelling
+    expect(state.log.slice(0, 3)).toEqual(['fill:"nunca "', 'fill:"nunca"', 'key:escape'])
+    expect(state.box).toBe('rascunho')
+    expect(state.sent).toEqual([])
   })
 })
 
