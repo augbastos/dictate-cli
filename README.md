@@ -57,6 +57,16 @@ a simple microphone button.
 DictateCLI follows Claude Code's voice language setting. Change it in `/config` if
 needed.
 
+## What it runs and sends
+
+- **Programs:** its own helper, `bin\dictate-key.exe` (built from `helper/dictate-key.cs`
+  on your machine), to press Claude Code's voice key and read whether Claude Code is using
+  the microphone. On `/dictate setup` or `/dictate remove` only, PowerShell 7 runs the
+  bundled install or uninstall script.
+- **Prompts:** it submits only what Claude Code's voice dictation transcribed, then puts
+  your unsent draft back in the prompt. It reads the prompt only to do that.
+- **Network:** none of its own. See [SECURITY.md](SECURITY.md) for every file it changes.
+
 ## Privacy
 
 DictateCLI itself records nothing, stores nothing, opens no network connection and adds

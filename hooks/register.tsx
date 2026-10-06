@@ -68,13 +68,40 @@ let isStarting = false // start() in flight: a press now would race its F11
 let shortcut: string | undefined // the chord bound to /dictate, shown on the card
 
 let startedAt = 0
-let ticker: { cancel: () => void } | undefined // redraws the recording timer
 
-function show($: EngineInterface, next: Phase) {
-  phase = next
-  ticker?.cancel()
-  ticker = next === 'recording' ? $.clock.every(1000, () => $.ui.invalidate('ui.render')) : undefined
-  $.ui.invalidate('ui.render')
+// Work left running after a press or a key. A failure is said, never swallowed; the
+// module unloading mid-recording (a reload) also lands here.
+async function settle($: EngineInterface, work: Promise<unknown>) {
+  try {
+    await work
+  } catch {
+    try {
+      $.ui.toast('DictateCLI stopped unexpectedly; check the prompt, then press again')
+    } catch {
+      // the module is gone (a reload): nothing left to tell
+    }
+  }
+}
+
+async function detach($: EngineInterface, work: Promise<unknown>) {
+  settle($, work) // never rejects: it reports the failure itself
+}
+
+let tickRun = 0 // the one loop that redraws the recording timer
+
+async function tick($: EngineInterface, id: number) {
+  while (phase === 'recording' && id === tickRun) {
+    await $.clock.sleep(1000)
+    $.ui.invalidate('ui.render')
+  }
+}
+
+async function clearError($: EngineInterface) {
+  await $.clock.sleep(ERROR_MS)
+  if (phase === 'error') {
+    phase = 'idle'
+    $.ui.invalidate('ui.render')
+  }
 }
 
 // `alt+d` → `Alt+D`
@@ -112,11 +139,11 @@ async function fail($: EngineInterface, text: string) {
   run++
   await $.prompt.fill({ text: base })
   message = text
-  show($, 'error')
+  phase = 'error'
+  $.ui.invalidate('ui.render')
   $.ui.toast(`DictateCLI: ${text}`)
-  $.clock.after(ERROR_MS, () => {
-    if (phase === 'error') show($, 'idle')
-  })
+  const clearing = clearError($)
+  detach($, clearing)
 }
 
 // The draft back in the prompt, in front of anything typed meanwhile.
@@ -139,8 +166,10 @@ async function releaseKeyboard($: EngineInterface) {
 
 async function restore($: EngineInterface) {
   run++
-  show($, 'idle')
-  await $.prompt.fill({ text: withDraft((await $.prompt.read()).text) })
+  phase = 'idle'
+  $.ui.invalidate('ui.render')
+  const { text } = await $.prompt.read()
+  await $.prompt.fill({ text: withDraft(text) })
 }
 
 // A dictation is a prompt of its own: what was said is sent alone, and what had been
@@ -155,7 +184,8 @@ async function finish($: EngineInterface, id: number, transcript: string) {
   if (run !== id) return // Claude Code already sent it
   run++
   const text = transcript.trim()
-  show($, 'idle')
+  phase = 'idle'
+  $.ui.invalidate('ui.render')
   if (text === '') {
     await $.prompt.fill({ text: base })
     return
@@ -202,18 +232,18 @@ async function watchRecording($: EngineInterface, id: number) {
       // microphone confirms the cancel at once; otherwise look again, as before.
       if ((await micState($)) === 'off') {
         await $.clock.sleep(MIC_CONFIRM_MS)
-        if (run === id && phase === 'recording' && (await $.prompt.read()).text === '') return restore($)
+        if (run === id && phase === 'recording' && (await $.prompt.read()).text === '') { await restore($); return }
         continue
       }
-      if ((await isCancelledNatively($, id)) && phase === 'recording') return restore($)
+      if ((await isCancelledNatively($, id)) && phase === 'recording') { await restore($); return }
       continue
     }
     // No word yet: the microphone tells whether Claude Code still listens.
     const mic = await micState($)
     if (run !== id || phase !== 'recording') return
     if (mic === 'on') isMicSeen = true
-    else if (mic === 'off' && isMicSeen) return restore($) // Esc before the first word
-    if ((await $.clock.now()) - since > NO_SPEECH_MS && run === id && phase === 'recording') return restore($)
+    else if (mic === 'off' && isMicSeen) { await restore($); return } // Esc before the first word
+    if ((await $.clock.now()) - since > NO_SPEECH_MS && run === id && phase === 'recording') { await restore($); return }
   }
 }
 
@@ -229,27 +259,35 @@ async function start($: EngineInterface) {
 
 async function startRecording($: EngineInterface) {
   startedAt = Date.now()
-  show($, 'recording')
+  phase = 'recording'
+  $.ui.invalidate('ui.render')
+  const ticking = tick($, ++tickRun)
+  detach($, ticking)
   const id = ++run
   base = (await $.prompt.read()).text
   // Claude Code's tap mode only starts on an empty prompt; the draft comes back on send or ×.
   if (base !== '' && !(await $.prompt.fill({ text: '' })).isFilled) {
-    return fail($, 'the prompt is busy')
+    await fail($, 'the prompt is busy')
+    return
   }
   // A non-empty draft just changed already. The prompt must be empty again: tap mode
   // starts only on an empty prompt.
   if (base === '' && !(await releaseKeyboard($)) && (await $.prompt.read()).text !== '') {
-    return fail($, 'the prompt is busy')
+    await fail($, 'the prompt is busy')
+    return
   }
   if (!(await press($, 'f11'))) {
-    return fail($, 'could not reach Claude Code voice; run /dictate setup')
+    await fail($, 'could not reach Claude Code voice; run /dictate setup')
+    return
   }
-  detach($, watchRecording($, id))
+  const watching = watchRecording($, id)
+  detach($, watching)
 }
 
 async function stop($: EngineInterface) {
   if (phase !== 'recording') return
-  show($, 'transcribing')
+  phase = 'transcribing'
+  $.ui.invalidate('ui.render')
   const id = run
   // Nothing on screen yet: give a short utterance a moment to show up.
   const heardBy = (await $.clock.now()) + HEARD_MS
@@ -263,11 +301,13 @@ async function stop($: EngineInterface) {
     // that may still run; never while a turn runs (there Esc would interrupt it, and a
     // silent recording stops by itself). Nothing is sent either way.
     if (!isWorking) await press($, 'escape')
-    return restore($)
+    await restore($)
+    return
   }
   if (!(await press($, 'f11'))) {
     await press($, 'escape')
-    return fail($, 'could not stop the recording')
+    await fail($, 'could not stop the recording')
+    return
   }
   const startedWaiting = await $.clock.now()
   let last = ''
@@ -277,7 +317,7 @@ async function stop($: EngineInterface) {
     if (run !== id) return // Claude Code sent it: the prompt.submit hook merged it
     const { text } = await $.prompt.read()
     if (run !== id) return
-    if (text === '' && last !== '' && (await isCancelledNatively($, id))) return restore($) // Esc while transcribing
+    if (text === '' && last !== '' && (await isCancelledNatively($, id))) { await restore($); return } // Esc while transcribing
     if (run !== id) return
     same = text === last ? same + 1 : 0
     last = text
@@ -285,13 +325,15 @@ async function stop($: EngineInterface) {
   }
   if (run !== id) return
   if (last.trim() !== '') return finish($, id, last)
-  return restore($)
+  await restore($)
+  return
 }
 
 async function cancel($: EngineInterface) {
   if (phase !== 'recording' && phase !== 'transcribing') return
   run++
-  show($, 'idle')
+  phase = 'idle'
+  $.ui.invalidate('ui.render')
   // Esc is Claude Code's own cancel: it drops the audio and the transcript. While a
   // turn runs, an Esc that Claude Code's voice does not take would interrupt the turn:
   // then Esc goes only when the live transcript shows Claude Code is listening.
@@ -311,18 +353,6 @@ async function toggle($: EngineInterface) {
   if (phase === 'recording') return stop($)
   if (phase === 'transcribing') return // one press, one transition: wait for the send
   return start($)
-}
-
-// Work left running after a press or a key. A failure is said, never swallowed; the
-// module unloading mid-recording (a reload) also lands here.
-function detach($: EngineInterface, work: Promise<unknown>) {
-  work.catch(() => {
-    try {
-      $.ui.toast('DictateCLI stopped unexpectedly; check the prompt, then press again')
-    } catch {
-      // the module is gone (a reload): nothing left to tell
-    }
-  })
 }
 
 // `/dictate setup` and `/dictate remove`: the installer's own scripts, for a plugin
@@ -377,7 +407,8 @@ export const register: Register = (on, options) => {
     }
     const arg = (e.args ?? '').trim().toLowerCase()
     if (arg === 'setup' || arg === 'remove') {
-      detach($, configure($, arg))
+      const configuring = configure($, arg)
+      detach($, configuring)
       return {}
     }
     if (arg !== '') {
@@ -387,7 +418,9 @@ export const register: Register = (on, options) => {
     const now = await $.clock.now()
     const isRepeat = now - lastKeyAt < KEY_QUIET_MS
     lastKeyAt = now
-    if (!isRepeat) detach($, toggle($)) // not awaited: a stop waits for the transcript
+    if (isRepeat) return {}
+    const toggling = toggle($) // not awaited: a stop waits for the transcript
+    detach($, toggling)
     return {}
   })
 
@@ -396,9 +429,11 @@ export const register: Register = (on, options) => {
     const isOurs = phase === 'recording' || phase === 'transcribing'
     if (!isOurs || e.origin.kind !== 'composer' || e.text.trimStart().startsWith('/')) return next(e)
     run++
-    show($, 'idle')
+    phase = 'idle'
+    $.ui.invalidate('ui.render')
     const sent = await next(e) // what was said, alone
-    detach($, giveDraftBack($))
+    const givingBack = giveDraftBack($)
+    detach($, givingBack)
     return sent
   })
 
@@ -407,7 +442,8 @@ export const register: Register = (on, options) => {
   on('prompt.edit', async ($, e, next) => {
     if (phase !== 'transcribing' || e.key === undefined) return next(e)
     run++
-    show($, 'idle')
+    phase = 'idle'
+    $.ui.invalidate('ui.render')
     const edited = await next(e)
     const gap = base === '' || edited.text === '' || /\s$/.test(base) ? '' : ' '
     const prefix = base + gap

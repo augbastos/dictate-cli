@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- Passes the Claude plugin directory's checks: simpler code paths the directory's checker
+  can follow, plain `icon` option, and a README section on what DictateCLI runs and sends.
+
 ## 0.4.0
 
 - `/dictate setup` and `/dictate remove`: set up (or undo) the helper, voice and keys

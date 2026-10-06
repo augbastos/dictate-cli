@@ -1,7 +1,7 @@
 {
   "name": "dictate-cli",
   "displayName": "DictateCLI",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Speak to Claude Code instead of typing: a microphone button for Claude Code's native voice dictation.",
   "author": {
     "name": "Augusto Bastos",
@@ -25,11 +25,7 @@
     "icon": {
       "type": "string",
       "title": "Mic icon",
-      "description": "nerd: Nerd Font microphone (needs a Nerd Font in the terminal). emoji: the 🎤 emoji.",
-      "options": [
-        "nerd",
-        "emoji"
-      ],
+      "description": "nerd (default): Nerd Font microphone, needs a Nerd Font in the terminal. emoji: the 🎤 emoji.",
       "default": "nerd"
     },
     "beside": {
