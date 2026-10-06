@@ -21,16 +21,17 @@ The card sits at the right end of the band right above the prompt. That is as cl
 to the dictation button of the Claude and ChatGPT apps as a mod can draw, because no
 plugin can draw inside the prompt row itself.
 
-Whatever you had typed stays: `investiga esse erro e` + spoken
-`compara com a versão anterior` is sent as one prompt.
+A dictation is a prompt of its own: what you say is sent alone, and whatever you
+had typed is set aside while you speak and comes back to the prompt afterwards,
+untouched.
 
 ## Use
 
 | You | DictateCLI |
 |---|---|
-| click 🎤 **DictateCLI**, or **Alt+D** (or `/dictate`) | keeps what you typed, clears the prompt, starts Claude Code voice |
+| click 🎤 **DictateCLI**, or **Alt+D** (or `/dictate`) | sets what you typed aside, clears the prompt, starts Claude Code voice |
 | speak | Claude Code shows the live transcript in the prompt |
-| click 🎤 **Send**, or **Alt+D** again | stops; Claude Code transcribes; your text + the transcript is sent once |
+| click 🎤 **Send**, or **Alt+D** again | stops; Claude Code transcribes; what you said is sent once; your typed text comes back |
 | click × **Cancel**, or press **Esc** | discards the recording and puts back exactly what you had typed |
 | say nothing, then Send | nothing is sent; your text comes back |
 | type while it transcribes | auto-send stops; your draft goes back in front of what you typed |

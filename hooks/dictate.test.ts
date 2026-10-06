@@ -158,13 +158,14 @@ for (const via of ['mouse', 'keyboard'] as const) {
       expect(await ui.find({ key: 'cancel' })).toBeUndefined()
     })
 
-    test('typed + voice: one prompt with both (English)', async ($, on) => {
+    test('typed draft + voice: the voice is sent alone, the draft comes back (English)', async ($, on) => {
       const { clock, state, toggle } = await setup($, on, { transcript: 'compare it with the previous behaviour' }, 'check this test and')
       await toggle()
       expect(state.box).toBe('')
       await toggle()
       await clock.advance(5000)
-      expect(state.sent).toEqual(['check this test and compare it with the previous behaviour'])
+      expect(state.sent).toEqual(['compare it with the previous behaviour'])
+      expect(state.box).toBe('check this test and')
     })
 
     test('code-switching PT-BR + English term', async ($, on) => {
@@ -172,7 +173,8 @@ for (const via of ['mouse', 'keyboard'] as const) {
       await toggle()
       await toggle()
       await clock.advance(5000)
-      expect(state.sent).toEqual(['por favor faz o rollback do deploy no staging'])
+      expect(state.sent).toEqual(['faz o rollback do deploy no staging'])
+      expect(state.box).toBe('por favor')
     })
 
     test('× cancels: nothing sent, draft restored, idle again', async ($, on) => {
@@ -217,8 +219,8 @@ for (const via of ['mouse', 'keyboard'] as const) {
       await toggle()
       await toggle()
       await clock.advance(15000)
-      expect(state.sent).toEqual(['roda os testes? sim'])
-      expect(state.box).toBe('')
+      expect(state.sent).toEqual(['sim'])
+      expect(state.box).toBe('roda os testes?')
     })
 
     test('silence: nothing sent, draft restored, Esc makes sure nothing listens', async ($, on) => {

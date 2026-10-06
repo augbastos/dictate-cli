@@ -42,6 +42,7 @@ const CONFIRM_LOOKS = 2
 // which DictateCLI cannot see): the card goes back to idle and the draft comes back.
 export const NO_SPEECH_MS = 16_000
 const KEY_GAP_MS = 150
+const DRAFT_BACK_MS = 300
 const ERROR_MS = 2500
 // A held key repeats; a press only counts after this long without one, which also
 // spans Windows' longest initial repeat delay (1 s).
@@ -123,12 +124,20 @@ async function restore($: EngineInterface) {
   await $.prompt.fill({ text: withDraft((await $.prompt.read()).text) })
 }
 
+// A dictation is a prompt of its own: what was said is sent alone, and what had been
+// typed comes back to the prompt untouched, once the send has cleared it.
+async function giveDraftBack($: EngineInterface) {
+  if (base === '') return
+  await $.clock.sleep(DRAFT_BACK_MS)
+  if ((await $.prompt.read()).text === '') await $.prompt.fill({ text: base })
+}
+
 async function finish($: EngineInterface, id: number, transcript: string) {
   if (run !== id) return // Claude Code already sent it
   run++
-  const text = merge(base, transcript)
+  const text = transcript.trim()
   show($, 'idle')
-  if (text === null) {
+  if (text === '') {
     await $.prompt.fill({ text: base })
     return
   }
@@ -136,9 +145,12 @@ async function finish($: EngineInterface, id: number, transcript: string) {
   try {
     await $.prompt.submit({ text })
   } catch {
-    await $.prompt.fill({ text }) // never lose it: back in the prompt, unsent
+    // never lose it: draft and transcript back in the prompt, unsent
+    await $.prompt.fill({ text: merge(base, text) ?? base })
     $.ui.toast('DictateCLI: could not send; the text is in the prompt')
+    return
   }
+  await giveDraftBack($)
 }
 
 // The prompt emptied by itself: Claude Code either sent the transcript (the
@@ -301,14 +313,15 @@ export const register: Register = (on, options) => {
     return {}
   })
 
-  // Claude Code sends a tap-mode transcript of 3+ words itself: put the draft in front.
+  // Claude Code sends a tap-mode transcript of 3+ words itself; the draft comes back after.
   on('prompt.submit', async ($, e, next) => {
     const isOurs = phase === 'recording' || phase === 'transcribing'
     if (!isOurs || e.origin.kind !== 'composer' || e.text.trimStart().startsWith('/')) return next(e)
     run++
     show($, 'idle')
-    const text = merge(base, e.text)
-    return next(text === null ? e : { ...e, text })
+    const sent = await next(e) // what was said, alone
+    detach($, giveDraftBack($))
+    return sent
   })
 
   // Typing while Claude Code transcribes: the person takes over. Stop auto-sending
