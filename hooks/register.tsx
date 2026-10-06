@@ -24,10 +24,10 @@ export type TransportKey = 'f11' | 'escape'
 export const TRANSPORT_KEYS: readonly TransportKey[] = ['f11', 'escape']
 export const COMMAND = 'dictate'
 
-const POLL_MS = 250
+const POLL_MS = 150
 // Under 3 words Claude Code inserts the transcript without sending it: once the
 // draft has stood still this long after stop, DictateCLI sends it.
-const SETTLE_POLLS = 6
+const SETTLE_POLLS = 10
 const GIVE_UP_MS = 12_000
 // On stop, DictateCLI waits this long for a live transcript to show. None means nothing
 // was heard, or Claude Code stopped listening (an Esc before the first word): then
@@ -35,8 +35,8 @@ const GIVE_UP_MS = 12_000
 const HEARD_MS = 1500
 // A prompt that empties by itself (Esc cancelled Claude Code's recording, or it sent
 // the transcript): it must stay empty this many looks, this far apart, to be a cancel.
-const CONFIRM_MS = 600
-const CONFIRM_LOOKS = 2
+const CONFIRM_MS = 300
+const CONFIRM_LOOKS = 1
 // Claude Code's voice stops by itself after 15 s of silence. With no word for longer
 // than that, it is not recording any more (silence, or an Esc before the first word,
 // which DictateCLI cannot see): the card goes back to idle and the draft comes back.
