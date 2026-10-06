@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-safe:
+    name: Public-safe tree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No personal paths, private references or secrets in tracked files
+        run: |
+          pattern='([A-Z]:\\\\Users\\\\|/Users/[a-z]|/home/[a-z]|_handoffs|DevData|BEGIN [A-Z ]*PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{20,}|sk-ant-|AKIA[0-9A-Z]{16})'
+          if git grep -n -I -E "$pattern" -- . ':!.github/workflows/ci.yml' ':!hooks/*.test.ts'; then
+            echo "::error::private or secret-looking content in tracked files"
+            exit 1
+          fi
+      - name: No build output tracked
+        run: test -z "$(git ls-files bin)"
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the helper with the C# compiler included in Windows
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force bin | Out-Null
+          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" -nologo -optimize -out:bin\dictate-key.exe helper\dictate-key.cs
+          if ($LASTEXITCODE -ne 0) { throw 'helper build failed' }
+      - name: The helper refuses anything but its fixed operations
+        shell: pwsh
+        run: |
+          foreach ($arg in 'f9', 'calc.exe', '') {
+            & .\bin\dictate-key.exe $arg
+            if ($LASTEXITCODE -ne 64) { throw "argument '$arg' was not refused (exit $LASTEXITCODE)" }
+          }
+          & .\bin\dictate-key.exe mic
+          if ($LASTEXITCODE -notin 10, 11, 12) { throw "mic query exit $LASTEXITCODE" }
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Plugin manifest and module validate
+        run: claude plugin validate .
+      - name: Plugin tests
+        run: claude plugin test .
+      - name: Build output stays untracked
+        shell: pwsh
+        run: if (git status --porcelain) { git status; throw 'working tree changed' }

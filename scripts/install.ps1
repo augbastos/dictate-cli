@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
   Installs DictateCLI (voice dictation for Claude Code) for the current user: builds the

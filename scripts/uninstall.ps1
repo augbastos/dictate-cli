@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
   Removes DictateCLI: uninstalls the plugin and its marketplace, and puts back the voice,
