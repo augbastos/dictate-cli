@@ -9,12 +9,16 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   public-safe:
     name: Public-safe tree
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: No personal paths, private references or secrets in tracked files
         run: |
           pattern='([A-Z]:\\\\Users\\\\|/Users/[a-z]|/home/[a-z]|_handoffs|DevData|BEGIN [A-Z ]*PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{20,}|sk-ant-|AKIA[0-9A-Z]{16})'
@@ -29,7 +33,7 @@ jobs:
     name: Windows
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Build the helper with the C# compiler included in Windows
         shell: pwsh
         run: |
