@@ -1,12 +1,12 @@
 {
-  "name": "dictate",
-  "description": "Dictate: a clickable mic for Claude Code's built-in voice dictation.",
+  "name": "dictate-cli",
+  "description": "DictateCLI: voice dictation for Claude Code.",
   "owner": { "name": "Augusto Bastos" },
   "plugins": [
     {
-      "name": "dictate",
+      "name": "dictate-cli",
       "source": "./",
-      "description": "A clickable mic for Claude Code's built-in voice dictation.",
+      "description": "DictateCLI: clickable voice dictation in Claude Code's terminal UI, on Claude's native voice backend.",
       "author": { "name": "Augusto Bastos" }
     }
   ]

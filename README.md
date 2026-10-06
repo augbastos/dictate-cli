@@ -1,11 +1,14 @@
-# Dictate
+# DictateCLI
 
-Voice dictation for Claude Code, from a button or a key.
+**Voice dictation for Claude Code.**
+
+DictateCLI adds clickable voice dictation to Claude Code's terminal UI using Claude
+Code's own (native) voice backend.
 
 ```
-                                             ╭───────────────────╮
-                                             │ 🎤  Dictate   F9  │      idle
-                                             ╰───────────────────╯
+                                             ╭──────────────────╮
+                                             │ 🎤  DictateCLI   │      idle
+                                             ╰──────────────────╯
 ❯ investiga esse erro e
 
                          ╭───────────────────────────────────╮
@@ -21,45 +24,50 @@ plugin can draw inside the prompt row itself.
 Whatever you had typed stays: `investiga esse erro e` + spoken
 `compara com a versão anterior` is sent as one prompt.
 
-## Mouse
+## Use
 
-Click 🎤 **Dictate** to start.
-Click 🎤 **Send** to transcribe and send.
-Click × **Cancel**, or press Esc, to discard.
+| You | DictateCLI |
+|---|---|
+| click 🎤 **DictateCLI** (or run `/dictate`) | keeps what you typed, clears the prompt, starts Claude Code voice |
+| speak | Claude Code shows the live transcript in the prompt |
+| click 🎤 **Send** (or `/dictate` again) | stops; Claude Code transcribes; your text + the transcript is sent once |
+| click × **Cancel**, or press **Esc** | discards the recording and puts back exactly what you had typed |
+| say nothing, then Send | nothing is sent; your text comes back |
+| type while it transcribes | auto-send stops; your draft goes back in front of what you typed |
 
-## Keyboard
+After a click on the card, the keyboard goes straight back to the prompt, so a single
+Esc cancels.
 
-F9 to start.
-F9 again to transcribe and send.
-Esc to cancel.
+### Keyboard
 
-The mouse and the key drive the same thing. You can start with one and stop with
-the other, and the card always shows the state. Holding F9 down counts as one press.
+`/dictate` toggles the same thing as the card. Mouse and keyboard drive one state
+machine, and the card always shows the state.
 
-### The Application (Menu) key
+A one-key shortcut is limited by Claude Code itself:
 
-Many Windows keyboards have an Application/Menu key that people rarely use, and it
-would make a good dedicated Dictate key. It is **not supported**: Claude Code's key
-reader has no name for that key, so no Claude Code keybinding can hold it.
-Supporting it would mean a global Windows keyboard hook or a remap. Dictate
-deliberately has neither: it never changes what a key does outside Claude Code.
-`install.ps1 -Shortcut apps` explains this and changes nothing.
+- **Function keys (F9 and the rest) do not work.** Claude Code 2.1.289 and 2.1.290
+  never route them to their keybindings. A function key bound to a command never
+  runs it, while a letter chord (`alt+d`, `ctrl+y`) does (tested). `install.ps1`
+  refuses them.
+- **The Application/Menu key is not supported.** Claude Code's key reader has no
+  name for it. Supporting it would need a global Windows keyboard hook or remap, and
+  DictateCLI never changes what a key does outside Claude Code.
+
+Any chord you bind to `command:dictate` in `~/.claude/keybindings.json` (context
+`Chat`) toggles DictateCLI, and the card shows it.
 
 ## What it is (and is not)
 
-Dictate is a Claude Code mod (a function-hooks plugin). It draws the card and drives
-Claude Code's own `/voice` dictation (tap mode). The speech-to-text is Claude
-Code's.
+DictateCLI is a Claude Code mod (a function-hooks plugin, `dictate-cli@dictate-cli`).
+The command is `/dictate`. It draws the card and drives Claude Code's own `/voice`
+dictation in tap mode. The speech-to-text is Claude Code's.
 
-How the keys fit together:
-
-- **Your key (F9)** is bound to `command:dictate`, so it runs Dictate's `/dictate`
-  command, which toggles Dictate. It never reaches Claude Code's voice directly.
-- **The transport (F11)** is bound to `voice:pushToTalk`. Only Dictate's helper
-  presses it, by writing it into the console of the Claude Code process that runs
-  Dictate. VS Code and Windows Terminal both keep a physical F11 for fullscreen, so
-  your own F11 never bypasses Dictate. The helper accepts only F11 and Esc, so a
-  toggle can never press F9 again.
+How it reaches the voice: the mod API has no call to start or stop native dictation.
+So DictateCLI's helper (`bin/dictate-key.exe`) writes one key, **F11**, which is bound
+to `voice:pushToTalk`, into the console of the Claude Code process that runs the mod.
+It does this only on a click or `/dictate`. VS Code and Windows Terminal keep a
+physical F11 for fullscreen, so your own F11 never bypasses DictateCLI. The helper
+accepts only F11 and Esc.
 
 It is not a voice assistant and not system-wide dictation. It has no text-to-speech,
 no wake word, no conversation mode, no speech-to-text of its own, no server, no
@@ -67,18 +75,19 @@ telemetry and no background process.
 
 ## Requirements
 
-- Windows 10 or 11 (the key helper is Windows-only for now).
+- Windows 10 or 11 (the helper is Windows-only for now).
 - Claude Code 2.1.287 or newer, with function-hook plugins (mods).
 - A claude.ai login (voice dictation is not available with an API key, Bedrock,
   Vertex or Foundry) and a working microphone.
-- The fullscreen renderer for mouse clicks (`install.ps1` turns it on). The keyboard
-  works without it.
+- The fullscreen renderer for mouse clicks (`install.ps1` turns it on).
+- For Portuguese (or any non-English) dictation, set Claude Code's `language`
+  setting (e.g. `"language": "portuguese"`). Claude Code's voice uses it, English
+  otherwise. It also sets the language Claude answers in.
 
 ## Install
 
 ```powershell
-pwsh -NoProfile -File scripts\install.ps1            # F9 (default)
-pwsh -NoProfile -File scripts\install.ps1 -Shortcut disabled
+pwsh -NoProfile -File scripts\install.ps1
 pwsh -NoProfile -File scripts\install.ps1 -Beside      # share the band row with AFKSwitch
 ```
 
@@ -89,27 +98,15 @@ then:
 
 - sets `voice: { enabled: true, mode: "tap" }` and `tui: "fullscreen"` in settings
   (`-NoFullscreen` skips the renderer change);
-- in keybindings (context `Chat`): `f9 → command:dictate`,
-  `f11 → voice:pushToTalk`, and `space → null`, so typing a space never starts a
-  recording.
+- in keybindings (context `Chat`): `f11 → voice:pushToTalk` and `space → null`, so
+  typing a space never starts a recording.
 
 New sessions show the card. A running session picks it up with `/reload-plugins`.
 
-## What happens
-
-| You | Dictate |
-|---|---|
-| Dictate / F9 | keeps what you typed, clears the prompt, starts Claude Code voice |
-| speak | Claude Code shows the live transcript in the prompt |
-| Send / F9 | stops; Claude Code transcribes; your text + the transcript is sent once |
-| Cancel / Esc | discards the recording and puts back exactly what you had typed |
-| say nothing, then Send / F9 | nothing is sent; your text comes back |
-| type while it transcribes | auto-send stops; your draft goes back in front of what you typed |
-
 ## Options
 
-In `/plugin` → dictate → configure (or `pluginConfigs["dictate@dictate"].options` in
-settings):
+In `/plugin` → dictate-cli → configure (or
+`pluginConfigs["dictate-cli@dictate-cli"].options` in settings):
 
 - `icon`: `nerd` (default, the Nerd Font microphone; needs a Nerd Font in the
   terminal) or `emoji` (🎤).
@@ -118,13 +115,13 @@ settings):
 
 ## Privacy
 
-Dictate keeps no audio and writes no files. Recording and transcription are Claude
-Code's own: the audio is streamed to Anthropic for transcription and is not
+DictateCLI keeps no audio and writes no files. Recording and transcription are
+Claude Code's own: the audio is streamed to Anthropic for transcription and is not
 processed locally (see Claude Code's voice dictation and data usage docs).
 
-The helper `bin/dictate-key.exe` writes exactly one key press (F11 or Esc) into the
-console of the Claude Code process that started it, and only on a click or F9. It
-accepts no other input, so nothing you say can become a command.
+The helper writes exactly one key press (F11 or Esc) into the console of the Claude
+Code process that started it. It accepts no other input, so nothing you say can
+become a command.
 
 ## Uninstall
 
@@ -132,30 +129,31 @@ accepts no other input, so nothing you say can become a command.
 pwsh -NoProfile -File scripts\uninstall.ps1
 ```
 
-It uninstalls the plugin and puts back the `voice`, `tui`, `f9`, `f11` and `space`
-values recorded before the first install.
+It uninstalls the plugin and its marketplace, and puts back the `voice`, `tui`,
+`f9`, `f11` and `space` values recorded before the first install. It leaves your
+`language` setting alone.
 
 ## Known limitations
 
-- An Esc pressed before any words show up cannot be seen by Dictate: the card stays
-  on REC until the next press. That press finds nothing to send, gives your draft
-  back and never presses the voice key blind.
-- A word spoken right before stopping has 1.5 s to show up as live text; Dictate
+- **Esc before the first word.** An Esc pressed before any words show up cancels
+  Claude Code's recording, but DictateCLI cannot see that: the mod API exposes no
+  voice state. The card stays on REC until the next press. That press finds nothing
+  to send, gives your draft back, and never presses the voice key blind. Once words
+  show up, Esc is seen and the draft comes back at once.
+- A word spoken right before stopping has 1.5 s to show up as live text; DictateCLI
   sends nothing it has not seen.
-- The Application/Menu key is not supported (see above).
+- No one-key shortcut (see Keyboard).
 
 ## Troubleshooting
 
-- **The mic does not react to clicks.** Clicks need the fullscreen renderer
+- **The card does not react to clicks.** Clicks need the fullscreen renderer
   (`tui: "fullscreen"`, or `CLAUDE_CODE_NO_FLICKER=1`).
-- **F9 does nothing.** Check `~/.claude/keybindings.json` for `"f9": "command:dictate"`
-  in the `Chat` block, then `/reload-plugins`.
 - **"could not reach Claude Code voice".** Run `install.ps1` again to rebuild
   `bin/dictate-key.exe`.
 - **REC shows but no text appears.** Check the microphone permission in Windows
   Settings → Privacy → Microphone, and that `/voice` works on its own.
-- **One- or two-word dictations are not sent by Claude Code.** Dictate sends them
-  itself about 1.5 s after the transcript stops changing.
+- **Portuguese comes out as English words.** Set `"language": "portuguese"` in
+  `~/.claude/settings.json`.
 
 ## License
 

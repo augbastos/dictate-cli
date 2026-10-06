@@ -2,7 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 const BAND = { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 80, scroll: { bodyRows: 9, top: 0 }, view: {} }
 
-// What lies beneath Dictate in the band: another plugin's tree, or the engine's own node.
+// What lies beneath DictateCLI in the band: another plugin's tree, or the engine's own node.
 for (const beside of [false, true])
 for (const beneath of ['plugin', 'engine'] as const) {
   test(`band keeps what is beneath (${beneath}, beside ${beside}) and adds the mic`, { options: { beside } }, async ($, on) => {
@@ -11,9 +11,9 @@ for (const beneath of ['plugin', 'engine'] as const) {
       const { Box, Text } = $.ui.resolve(e)
       return h(Box, { borderStyle: 'single', paddingX: 1 }, h(Text, {}, 'AFK'))
     })
-    const ui = await $.ui.mount({ plugin: 'dictate', surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+    const ui = await $.ui.mount({ plugin: 'dictate-cli', surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
     expect(await ui.find({ key: 'mic' })).toBeDefined()
-    expect(await ui.find({ text: /Dictate/ })).toBeDefined()
+    expect(await ui.find({ text: /DictateCLI/ })).toBeDefined()
     if (beneath === 'plugin') expect(await ui.find({ text: 'AFK' })).toBeDefined()
   })
 }

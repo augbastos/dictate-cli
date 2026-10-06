@@ -15,7 +15,7 @@ const AFK = {
 for (const beside of [false, true]) {
   test(`with an AFK-like plugin in the band (beside ${beside})`, { plugins: [AFK], options: { beside } }, async ($, on) => {
     on('ui.render', { component: 'AbovePrompt' }, () => ({ type: 'engine', ref: 1 }) as never)
-    const ui = await $.ui.mount({ plugin: 'dictate', surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+    const ui = await $.ui.mount({ plugin: 'dictate-cli', surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
     expect(await ui.find({ key: 'mic' })).toBeDefined()
   })
 }

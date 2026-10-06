@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Removes Dictate: uninstalls the plugin and its marketplace, and puts back the voice,
+  Removes DictateCLI: uninstalls the plugin and its marketplace, and puts back the voice,
   renderer and F9 / F11 / Space binding values recorded before the first install.
 #>
 $ErrorActionPreference = 'Stop'
@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 $claudeDir = Join-Path $HOME '.claude'
 $settingsPath = Join-Path $claudeDir 'settings.json'
 $keysPath = Join-Path $claudeDir 'keybindings.json'
-$previousPath = Join-Path $claudeDir 'backups\dictate-previous.json'
+$previousPath = Join-Path $claudeDir 'backups\dictate-cli-previous.json'
 
 function Write-JsonAtomic($value, $path, $depth) {
     $tmp = "$path.dictate-tmp"
@@ -17,14 +17,14 @@ function Write-JsonAtomic($value, $path, $depth) {
 }
 function Restore($object, $name, $saved, $dictateValue) {
     if ($null -eq $saved) {
-        # Not recorded (an older install): remove only what Dictate itself set.
+        # Not recorded (an older install): remove only what DictateCLI itself set.
         if ($object.PSObject.Properties[$name] -and $object.$name -eq $dictateValue) { $object.PSObject.Properties.Remove($name) }
     } elseif ($saved.present) { $object | Add-Member -Force $name $saved.value }
     else { $object.PSObject.Properties.Remove($name) }
 }
 
-claude plugin uninstall dictate@dictate --scope user
-claude plugin marketplace remove dictate
+claude plugin uninstall dictate-cli@dictate-cli --scope user
+claude plugin marketplace remove dictate-cli
 
 if (-not (Test-Path $previousPath)) {
     Write-Warning "No ${previousPath}: settings and keybindings left as they are."
@@ -39,7 +39,7 @@ if (Test-Path $settingsPath) {
     $configs = $settings.PSObject.Properties['pluginConfigs']
     if ($configs) {
         # Plugin uninstall already drops the plugin's options; this clears what is left.
-        $configs.Value.PSObject.Properties.Remove('dictate@dictate')
+        $configs.Value.PSObject.Properties.Remove('dictate-cli@dictate-cli')
         if (@($configs.Value.PSObject.Properties).Count -eq 0) { $settings.PSObject.Properties.Remove('pluginConfigs') }
     }
     Write-JsonAtomic $settings $settingsPath 100
@@ -58,11 +58,11 @@ if (Test-Path $keysPath) {
         }
     }
     if (@($keys.bindings).Count -eq 0 -and @($keys.PSObject.Properties).Count -eq 1) {
-        Remove-Item $keysPath # Dictate created it
+        Remove-Item $keysPath # DictateCLI created it
     } else {
         Write-JsonAtomic $keys $keysPath 20
     }
 }
 
 Remove-Item $previousPath
-Write-Host 'Dictate removed. Restart Claude Code sessions (or /reload-plugins) to drop the mic.'
+Write-Host 'DictateCLI removed. Restart Claude Code sessions (or /reload-plugins) to drop the card.'

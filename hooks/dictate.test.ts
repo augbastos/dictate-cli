@@ -104,7 +104,7 @@ const BAND = {
 }
 
 async function mountBand($: Engine) {
-  return $.ui.mount({ plugin: 'dictate', surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  return $.ui.mount({ plugin: 'dictate-cli', surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
 }
 
 type Ui = Awaited<ReturnType<typeof mountBand>>
@@ -128,7 +128,7 @@ function inputs($: Engine, ui: Ui, clock: Clock) {
 }
 
 for (const via of ['mouse', 'keyboard'] as const) {
-  describe(`dictate via ${via}`, () => {
+  describe(`DictateCLI via ${via}`, () => {
     const setup = async ($: Engine, on: On, native: Native, draft = '') => {
       const fake = fakeClaude($, on, native, draft)
       const ui = await mountBand($)
@@ -346,7 +346,7 @@ describe('keyboard specifics', () => {
 
   test('while a turn runs, × before any words presses no Esc (it would interrupt the turn)', async ($, on) => {
     const { clock, state } = fakeClaude($, on, { transcript: '' }, 'rascunho')
-    const ui = await $.ui.mount({ plugin: 'dictate', surface: 'terminal', component: 'AbovePrompt', props: { ...BAND, isWorking: true } as never })
+    const ui = await $.ui.mount({ plugin: 'dictate-cli', surface: 'terminal', component: 'AbovePrompt', props: { ...BAND, isWorking: true } as never })
     await ui.press({ key: 'mic' })
     const cancelling = ui.press({ key: 'cancel' })
     await clock.advance(1000)
@@ -356,7 +356,7 @@ describe('keyboard specifics', () => {
     expect(state.sent).toEqual([])
   })
 
-  test('no recursion: Dictate never presses its own shortcut, one /dictate run per press', async ($, on) => {
+  test('no recursion: DictateCLI never presses its own shortcut, one /dictate run per press', async ($, on) => {
     const { clock, state } = fakeClaude($, on, { transcript: 'uma frase de teste' })
     const ui = await mountBand($)
     const { key } = inputs($, ui, clock)
@@ -369,7 +369,7 @@ describe('keyboard specifics', () => {
     expect(state.sent).toEqual(['uma frase de teste'])
   })
 
-  test('a prompt typed without Dictate passes untouched; a slash command while recording is not merged', async ($, on) => {
+  test('a prompt typed without DictateCLI passes untouched; a slash command while recording is not merged', async ($, on) => {
     const { clock, state } = fakeClaude($, on, { transcript: '' }, 'rascunho')
     const ui = await mountBand($)
     await $.prompt.submit({ text: 'normal prompt', origin: { kind: 'composer' } })
@@ -381,12 +381,12 @@ describe('keyboard specifics', () => {
   test('the card shows the chord bound to /dictate', async ($, on) => {
     fakeClaude($, on, { transcript: '' })
     mock.env(on, { USERPROFILE: 'C:/Users/someone' })
-    on('fs.read', () => ({ value: JSON.stringify({ bindings: [{ context: 'Chat', bindings: { f9: 'command:dictate', f11: 'voice:pushToTalk' } }] }) }))
+    on('fs.read', () => ({ value: JSON.stringify({ bindings: [{ context: 'Chat', bindings: { 'alt+d': 'command:dictate', f11: 'voice:pushToTalk' } }] }) }))
     on('command.register', () => ({ value: undefined }))
     on('session.start', (_, e) => ({ cwd: e.cwd }))
     await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true } as never)
     const ui = await mountBand($)
-    expect(await ui.find({ text: 'F9' })).toBeDefined()
+    expect(await ui.find({ text: 'ALT+D' })).toBeDefined()
   })
 })
 
@@ -422,13 +422,21 @@ describe('focus after a click', () => {
 })
 
 describe('config', () => {
-  test('default shortcut: install binds F9 to command:dictate, F11 is the transport', () => {
-    const installed = { bindings: [{ context: 'Chat', bindings: { f9: 'command:dictate', f11: 'voice:pushToTalk', space: null } }] }
-    expect(shortcutOf(JSON.stringify(installed))).toBe('f9')
+  test('default install: no shortcut bound (no key hint on the card), F11 is the transport', () => {
+    const installed = { bindings: [{ context: 'Chat', bindings: { f11: 'voice:pushToTalk', space: null } }] }
+    expect(shortcutOf(JSON.stringify(installed))).toBeUndefined()
+  })
+  test('a chord bound to command:dictate is the shortcut shown', () => {
+    const bound = { bindings: [{ context: 'Chat', bindings: { 'alt+d': 'command:dictate', f11: 'voice:pushToTalk' } }] }
+    expect(shortcutOf(JSON.stringify(bound))).toBe('alt+d')
+  })
+  test('identity: the command stays /dictate, the transport never includes a user key', () => {
+    expect(COMMAND).toBe('dictate')
+    expect([...TRANSPORT_KEYS]).toEqual(['f11', 'escape'])
   })
   test('no shortcut bound, or another context: none shown', () => {
     expect(shortcutOf(JSON.stringify({ bindings: [] }))).toBeUndefined()
-    expect(shortcutOf(JSON.stringify({ bindings: [{ context: 'Global', bindings: { f9: 'command:dictate' } }] }))).toBeUndefined()
+    expect(shortcutOf(JSON.stringify({ bindings: [{ context: 'Global', bindings: { 'alt+d': 'command:dictate' } }] }))).toBeUndefined()
   })
 })
 

@@ -3,19 +3,21 @@ import type { EngineInterface, Register } from 'claude-code'
 import { merge } from './merge'
 import { shortcutOf } from './shortcut'
 
-// Dictate: a card above the prompt and a keyboard shortcut (F9 by default) driving
-// Claude Code's own voice dictation (`/voice`, tap mode). Both inputs call the same
-// toggle() and cancel(). The speech-to-text is Claude Code's; Dictate keeps what you
-// had typed, sends once, and draws the state.
+// DictateCLI: voice dictation for Claude Code. A card above the prompt (and an
+// optional key bound to `command:dictate`) drive Claude Code's own voice dictation
+// (`/voice`, tap mode). Both inputs call the same toggle() and cancel(). The
+// speech-to-text is Claude Code's; DictateCLI keeps what you had typed, sends once,
+// and draws the state.
 //
 // Two keys, never the same one:
-// - USER SHORTCUT: F9 is bound to `command:dictate`, so a physical F9 runs /dictate,
-//   which calls toggle(). It never reaches Claude Code's voice directly.
+// - USER SHORTCUT: a key bound to `command:dictate` runs /dictate, which calls
+//   toggle(). It never reaches Claude Code's voice directly. (Function keys such as
+//   F9 never reach Claude Code's keybindings, so they cannot be that key.)
 // - TRANSPORT: the helper writes F11 into Claude Code's console, bound to
 //   `voice:pushToTalk`. F11 is the terminal's own fullscreen key in VS Code and
 //   Windows Terminal, so a physical F11 never reaches Claude Code.
 // The helper only accepts `f11` and `escape`, so a toggle can never press the
-// user shortcut again (no F9 → Dictate → F9 loop).
+// user shortcut again (no shortcut → DictateCLI → shortcut loop).
 
 type Phase = 'idle' | 'recording' | 'transcribing' | 'error'
 export type TransportKey = 'f11' | 'escape'
@@ -24,12 +26,12 @@ export const COMMAND = 'dictate'
 
 const POLL_MS = 250
 // Under 3 words Claude Code inserts the transcript without sending it: once the
-// draft has stood still this long after stop, Dictate sends it.
+// draft has stood still this long after stop, DictateCLI sends it.
 const SETTLE_POLLS = 6
 const GIVE_UP_MS = 12_000
-// On stop, Dictate waits this long for a live transcript to show. None means nothing
+// On stop, DictateCLI waits this long for a live transcript to show. None means nothing
 // was heard, or Claude Code stopped listening (an Esc before the first word): then
-// Dictate never presses the voice key blind (that could start a new recording).
+// DictateCLI never presses the voice key blind (that could start a new recording).
 const HEARD_MS = 1500
 // A prompt that empties by itself (Esc cancelled Claude Code's recording, or it sent
 // the transcript): it must stay empty this many looks, this far apart, to be a cancel.
@@ -87,7 +89,7 @@ async function fail($: EngineInterface, text: string) {
   await $.prompt.fill({ text: base })
   message = text
   show($, 'error')
-  $.ui.toast(`Dictate: ${text}`)
+  $.ui.toast(`DictateCLI: ${text}`)
   $.clock.after(ERROR_MS, () => {
     if (phase === 'error') show($, 'idle')
   })
@@ -130,7 +132,7 @@ async function finish($: EngineInterface, id: number, transcript: string) {
     await $.prompt.submit({ text })
   } catch {
     await $.prompt.fill({ text }) // never lose it: back in the prompt, unsent
-    $.ui.toast('Dictate: could not send; the text is in the prompt')
+    $.ui.toast('DictateCLI: could not send; the text is in the prompt')
   }
 }
 
@@ -144,7 +146,7 @@ async function isCancelledNatively($: EngineInterface, id: number) {
   return run === id
 }
 
-// While recording, Esc goes straight to Claude Code's own cancel; Dictate sees the
+// While recording, Esc goes straight to Claude Code's own cancel; DictateCLI sees the
 // live transcript vanish and gives the draft back.
 async function watchRecording($: EngineInterface, id: number) {
   let hasText = false
@@ -236,7 +238,7 @@ async function cancel($: EngineInterface) {
   const isCancelled = !isWorking || isListening ? await press($, 'escape') : false
   await $.clock.sleep(KEY_GAP_MS)
   await $.prompt.fill({ text: withDraft((await $.prompt.read()).text) })
-  if (!isCancelled) $.ui.toast('Dictate: press Esc if Claude Code is still recording')
+  if (!isCancelled) $.ui.toast('DictateCLI: press Esc if Claude Code is still recording')
 }
 
 // The one entry point for the mic button and the keyboard shortcut.
@@ -252,7 +254,7 @@ async function toggle($: EngineInterface) {
 function detach($: EngineInterface, work: Promise<unknown>) {
   work.catch(() => {
     try {
-      $.ui.toast('Dictate stopped unexpectedly; check the prompt, then press again')
+      $.ui.toast('DictateCLI stopped unexpectedly; check the prompt, then press again')
     } catch {
       // the module is gone (a reload): nothing left to tell
     }
@@ -264,7 +266,7 @@ export const register: Register = (on, options) => {
     const started = await next(e)
     await $.command.register({
       name: COMMAND,
-      description: 'Dictate: start voice dictation, or stop and send it (bind a key to command:dictate)',
+      description: 'DictateCLI: start voice dictation, or stop and send it (bind a key to command:dictate)',
       immediate: true,
     })
     const home = (await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))
@@ -329,7 +331,7 @@ export const register: Register = (on, options) => {
         borderDimColor={phase === 'idle'}
         paddingX={1}
       >
-        {phase === 'idle' && <Button key="mic" label={`${icon.mic}  Dictate`} plain onPress={onToggle} />}
+        {phase === 'idle' && <Button key="mic" label={`${icon.mic}  DictateCLI`} plain onPress={onToggle} />}
         {phase === 'idle' && hint !== '' && <Text dimColor>{`  ${hint}`}</Text>}
         {phase === 'recording' && <Text color="red">● {elapsed(Date.now())}   </Text>}
         {phase === 'recording' && <Button key="cancel" label={`${icon.cancel} Cancel`} plain dimColor onPress={() => detach($, cancel($))} />}
@@ -338,11 +340,11 @@ export const register: Register = (on, options) => {
         {phase === 'transcribing' && <Text dimColor>{icon.mic}  Transcribing…   </Text>}
         {phase === 'transcribing' && <Button key="cancel" label={`${icon.cancel} Cancel`} plain dimColor onPress={() => detach($, cancel($))} />}
         {phase === 'error' && <Text color="red">{message}   </Text>}
-        {phase === 'error' && <Button key="mic" label={`${icon.mic}  Dictate`} plain onPress={onToggle} />}
+        {phase === 'error' && <Button key="mic" label={`${icon.mic}  DictateCLI`} plain onPress={onToggle} />}
       </Box>
     )
 
-    // Another plugin's tree beneath us (e.g. AFKSwitch drawn below Dictate): one row.
+    // Another plugin's tree beneath us (e.g. AFKSwitch drawn below DictateCLI): one row.
     const isBottom = others === null || others === undefined || (others as { type?: unknown }).type === 'engine'
     if (!isBottom) {
       return (
