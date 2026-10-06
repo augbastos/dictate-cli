@@ -1,7 +1,8 @@
 #Requires -Version 7
 <#
 .SYNOPSIS
-  Install → uninstall must leave Claude Code's settings exactly as they were.
+  Install → uninstall must leave Claude Code's settings exactly as they were, both for the
+  full install and for -SkipPlugin (what /dictate setup and /dictate remove run).
   Each case runs in a throwaway config directory (CLAUDE_CONFIG_DIR), never the real one.
 #>
 $ErrorActionPreference = 'Stop'
@@ -39,7 +40,8 @@ function Snapshot($dir) {
 
 $failures = 0
 foreach ($case in $cases.GetEnumerator()) {
-    foreach ($installs in 1, 2) {
+    foreach ($run in @{ n = 1; flags = @() }, @{ n = 2; flags = @() }, @{ n = 1; flags = @('-SkipPlugin') }) {
+        $installs = $run.n; $flags = $run.flags; $label = "installed ${installs}x$(if ($flags) { ' ' + ($flags -join ' ') })"
         $dir = Join-Path ([IO.Path]::GetTempPath()) ("dictate-cli-test-" + [guid]::NewGuid())
         New-Item -ItemType Directory $dir | Out-Null
         if ($case.Value.settings) { Set-Content (Join-Path $dir 'settings.json') $case.Value.settings }
@@ -48,13 +50,13 @@ foreach ($case in $cases.GetEnumerator()) {
         $env:CLAUDE_CONFIG_DIR = $dir
         try {
             for ($i = 0; $i -lt $installs; $i++) {
-                pwsh -NoProfile -File $install | Out-Null
+                pwsh -NoProfile -File $install @flags | Out-Null
                 if ($LASTEXITCODE -ne 0) { throw "install exited $LASTEXITCODE" }
             }
             $keys = Get-Content (Join-Path $dir 'keybindings.json') -Raw | ConvertFrom-Json
             $chat = @($keys.bindings) | Where-Object { $_.context -eq 'Chat' } | Select-Object -First 1
             if ($chat.bindings.'alt+d' -ne 'command:dictate' -or $chat.bindings.f11 -ne 'voice:pushToTalk') { throw 'install did not bind alt+d and f11' }
-            pwsh -NoProfile -File $uninstall | Out-Null
+            pwsh -NoProfile -File $uninstall @flags | Out-Null
             if ($LASTEXITCODE -ne 0) { throw "uninstall exited $LASTEXITCODE" }
             $after = Snapshot $dir
             foreach ($name in $before.Keys) {
@@ -62,9 +64,9 @@ foreach ($case in $cases.GetEnumerator()) {
             }
             $junk = @(Get-ChildItem $dir -Recurse -File | Where-Object { $_.Name -like '*.dictate-tmp' -or $_.Name -eq 'dictate-cli-previous.json' })
             if ($junk.Count -gt 0) { throw "left behind: $($junk.Name -join ', ')" }
-            Write-Host "PASS  $($case.Key) (installed ${installs}x)"
+            Write-Host "PASS  $($case.Key) ($label)"
         } catch {
-            Write-Host "FAIL  $($case.Key) (installed ${installs}x): $_"
+            Write-Host "FAIL  $($case.Key) ($label): $_"
             $failures++
         } finally {
             Remove-Item Env:\CLAUDE_CONFIG_DIR

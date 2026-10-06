@@ -242,7 +242,7 @@ async function startRecording($: EngineInterface) {
     return fail($, 'the prompt is busy')
   }
   if (!(await press($, 'f11'))) {
-    return fail($, 'could not reach Claude Code voice; run scripts/install.ps1')
+    return fail($, 'could not reach Claude Code voice; run /dictate setup')
   }
   detach($, watchRecording($, id))
 }
@@ -325,6 +325,31 @@ function detach($: EngineInterface, work: Promise<unknown>) {
   })
 }
 
+// `/dictate setup` and `/dictate remove`: the installer's own scripts, for a plugin
+// installed without them (the Claude plugin directory). The plugin itself stays put.
+// PowerShell 7 by its install path, never a bare `pwsh` a project folder could shadow.
+let isConfiguring = false
+async function configure($: EngineInterface, arg: 'setup' | 'remove') {
+  if (isConfiguring || phase !== 'idle') {
+    $.ui.toast(`DictateCLI: ${isConfiguring ? 'already running' : 'finish or cancel the dictation first'}`)
+    return
+  }
+  isConfiguring = true
+  const pwsh = `${(await $.env.get('ProgramFiles')) ?? 'C:/Program Files'}/PowerShell/7/pwsh.exe`
+  const script = `${$.plugin.root}/scripts/${arg === 'setup' ? 'install' : 'uninstall'}.ps1`
+  $.ui.toast(arg === 'setup' ? 'DictateCLI: setting up…' : 'DictateCLI: restoring settings…')
+  try {
+    const r = await $.process.run([pwsh, '-NoProfile', '-File', script, '-SkipPlugin'], { timeoutMs: 180000 })
+    // The scripts end with one line saying how it went, or the reasons it did not.
+    const lines = r.stdout.split(/\r?\n/).filter((l) => l.trim() !== '' && !l.startsWith('Backup:'))
+    $.ui.toast(r.exitCode === 0 ? `DictateCLI: ${lines.at(-1) ?? 'done'}` : `DictateCLI ${arg} failed: ${lines.join(' ') || `exit ${r.exitCode}`}`)
+  } catch (error) {
+    $.ui.toast(`DictateCLI ${arg} could not run PowerShell 7 (${pwsh}): ${error instanceof Error ? error.message : String(error)}`)
+  } finally {
+    isConfiguring = false
+  }
+}
+
 export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
@@ -346,8 +371,17 @@ export const register: Register = (on, options) => {
   // The keyboard shortcut: a key bound to `command:dictate` runs /dictate.
   on('command.run', { command: COMMAND }, async ($, e) => {
     // `/dictate settings`: the only place DictateCLI explains itself at length.
-    if ((e.args ?? '').trim() === 'settings') {
+    if ((e.args ?? '').trim().toLowerCase() === 'settings') {
       await $.ui.open({ id: SETTINGS_PANE, title: 'DictateCLI', focus: true, closeOnEscape: true })
+      return {}
+    }
+    const arg = (e.args ?? '').trim().toLowerCase()
+    if (arg === 'setup' || arg === 'remove') {
+      detach($, configure($, arg))
+      return {}
+    }
+    if (arg !== '') {
+      $.ui.toast(`DictateCLI: unknown option "${arg}". Use /dictate, or /dictate settings, setup or remove.`)
       return {}
     }
     const now = await $.clock.now()
@@ -395,6 +429,7 @@ export const register: Register = (on, options) => {
         <Text>{`Language       ${voice}`}</Text>
         <Text dimColor>               follows Claude Code's `language` setting (/config); it also sets the language Claude answers in</Text>
         <Text dimColor>Options        /plugin → dictate-cli → configure (icon, beside)</Text>
+        <Text dimColor>Setup          /dictate setup after installing from the plugin directory; /dictate remove undoes it</Text>
         <Text> </Text>
         <Text dimColor>Esc closes this panel.</Text>
       </Box>

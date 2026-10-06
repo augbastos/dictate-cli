@@ -4,8 +4,13 @@
   Removes DictateCLI: uninstalls the plugin and its marketplace, and puts back the voice
   and renderer settings and the Alt+D / F11 / Space bindings (plus an F9 from older
   installs) recorded before the first install.
+.PARAMETER SkipPlugin
+  Restore the settings only and leave the plugin installed (for a plugin installed from
+  the Claude plugin directory: remove it afterwards with /plugin). `/dictate remove` runs this.
 #>
+param([switch]$SkipPlugin)
 $ErrorActionPreference = 'Stop'
+trap { Write-Host "Failed: $($_.Exception.Message)"; exit 1 }
 . (Join-Path $PSScriptRoot 'common.ps1')
 
 $claudeDir = Get-ClaudeDir
@@ -26,8 +31,10 @@ function Restore($object, $name, $saved, $dictateValue) {
     else { $object.PSObject.Properties.Remove($name) }
 }
 
-claude plugin uninstall dictate-cli@dictate-cli --scope user
-claude plugin marketplace remove dictate-cli
+if (-not $SkipPlugin) {
+    claude plugin uninstall dictate-cli@dictate-cli --scope user
+    claude plugin marketplace remove dictate-cli
+}
 
 if (-not (Test-Path $previousPath)) {
     Write-Warning "No ${previousPath}: settings and keybindings left as they are."
@@ -40,7 +47,7 @@ if (Test-Path $settingsPath) {
     Restore $settings 'voice' $previous.voice
     Restore $settings 'tui' $previous.tui
     $configs = $settings.PSObject.Properties['pluginConfigs']
-    if ($configs) {
+    if ($configs -and -not $SkipPlugin) {
         # Plugin uninstall already drops the plugin's options; this clears what is left.
         $configs.Value.PSObject.Properties.Remove('dictate-cli@dictate-cli')
         if (@($configs.Value.PSObject.Properties).Count -eq 0) { $settings.PSObject.Properties.Remove('pluginConfigs') }
@@ -81,4 +88,4 @@ if (Test-Path $keysPath) {
 }
 
 Remove-Item $previousPath
-Write-Host 'DictateCLI removed. Restart Claude Code sessions (or /reload-plugins) to drop the card.'
+Write-Host $(if ($SkipPlugin) { 'Settings restored. Remove the plugin with /plugin uninstall dictate-cli.' } else { 'DictateCLI removed. Restart Claude Code sessions (or /reload-plugins) to drop the card.' })

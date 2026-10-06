@@ -8,6 +8,11 @@
     process that started it;
   - `mic` reads, read-only, whether that process is using the microphone.
 - Read `~/.claude/keybindings.json` to show the shortcut.
+- On `/dictate setup` or `/dictate remove`, and only then, run its own
+  `scripts/install.ps1` or `scripts/uninstall.ps1` with PowerShell 7 (`-SkipPlugin`):
+  the same changes as the installer below (including building the helper into the
+  plugin's `bin/` and a backup in `~/.claude/backups`), and their undo. PowerShell is run
+  from its install path, `%ProgramFiles%\PowerShell\7\pwsh.exe`.
 
 It does not record audio, store transcripts, open network connections, or send
 telemetry. Recording and transcription are Claude Code's own voice dictation.

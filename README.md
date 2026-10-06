@@ -22,6 +22,10 @@ pwsh -File scripts\install.ps1
 
 Restart Claude Code. The microphone appears above the prompt.
 
+Installed the plugin another way, for example with `/plugin`? Run `/dictate setup` once
+instead, then restart Claude Code; run it again after each plugin update.
+`/dictate remove` undoes it.
+
 Requires Claude Code (2.1.287+) with voice dictation, a microphone and
 [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows).
 The installer checks these first and changes nothing if one is missing.

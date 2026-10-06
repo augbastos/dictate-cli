@@ -94,3 +94,41 @@ test('chord labels read like the app: alt+d → Alt+D', () => {
   expect(chordLabel('alt+d')).toBe('Alt+D')
   expect(chordLabel('ctrl+shift+k')).toBe('Ctrl+Shift+K')
 })
+
+test('/dictate setup runs the installer without reinstalling the plugin, and says how it went', async ($, on) => {
+  const clock = mock.clock(on)
+  mock.env(on, { ProgramFiles: 'C:/Program Files' })
+  const runs: string[][] = []
+  const toasts: string[] = []
+  on('ui.toast', (_, e) => {
+    toasts.push(String((e as { message?: string }).message ?? JSON.stringify(e)))
+    return { value: undefined }
+  })
+  on('process.run', (_, e) => {
+    runs.push(e.argv)
+    return { value: { exitCode: 0, stdout: 'Backup: x\nDictateCLI is set up. Restart Claude Code to use it.\n', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
+  await $.command.run({ command: COMMAND, args: 'setup', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 120 } } as never)
+  await clock.advance(10)
+  expect(runs).toHaveLength(1)
+  expect(runs[0][0]).toMatch(/PowerShell\/7\/pwsh\.exe$/) // never a bare pwsh a folder could shadow
+  expect(runs[0].slice(-2)).toEqual([runs[0][3], '-SkipPlugin'])
+  expect(runs[0][3]).toMatch(/scripts\/install\.ps1$/)
+  expect(toasts.join('\n')).toContain('DictateCLI is set up.')
+})
+
+test('an unknown /dictate option says so instead of starting the mic', async ($, on) => {
+  const runs: string[][] = []
+  const toasts: string[] = []
+  on('ui.toast', (_, e) => {
+    toasts.push(JSON.stringify(e))
+    return { value: undefined }
+  })
+  on('process.run', (_, e) => {
+    runs.push(e.argv)
+    return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
+  await $.command.run({ command: COMMAND, args: 'setpu', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 120 } } as never)
+  expect(runs).toHaveLength(0)
+  expect(toasts.join('\n')).toContain('unknown option')
+})

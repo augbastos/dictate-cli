@@ -6,6 +6,9 @@
   Claude Code's voice dictation in tap mode, and switches to the fullscreen renderer
   (mouse clicks). Backs up every file it touches first.
   Run it on every machine: the helper (bin/) is built locally, never committed.
+.PARAMETER SkipPlugin
+  The plugin is already installed (for example from the Claude plugin directory): build
+  the helper and set up voice and keys only. `/dictate setup` runs this.
 .PARAMETER NoFullscreen
   Leave the renderer alone (the card is then not clickable; /dictate still works).
 .PARAMETER Beside
@@ -17,8 +20,9 @@
   The Application/Menu key is refused: Claude Code has no name for it. DictateCLI never
   installs a global keyboard hook.
 #>
-param([switch]$NoFullscreen, [switch]$Beside, [string]$Shortcut = 'alt+d')
+param([switch]$NoFullscreen, [switch]$Beside, [string]$Shortcut = 'alt+d', [switch]$SkipPlugin)
 $ErrorActionPreference = 'Stop'
+trap { Write-Host "Failed: $($_.Exception.Message)"; exit 1 }
 
 switch ($Shortcut.Trim().ToLowerInvariant()) {
     'alt+d' { $userKey = 'alt+d' }
@@ -92,16 +96,18 @@ if ($LASTEXITCODE -ne 0) { throw 'Building the helper failed' }
 $oldPrevious = Join-Path $backups 'dictate-previous.json'
 if ((Test-Path $oldPrevious) -and -not (Test-Path $previousPath)) { Move-Item $oldPrevious $previousPath }
 $oldOptions = (Read-Json $settingsPath ([pscustomobject]@{})).pluginConfigs.'dictate@dictate'.options
-if ((claude plugin list 2>&1 | Out-String) -match 'dictate@dictate') {
+if (-not $SkipPlugin -and (claude plugin list 2>&1 | Out-String) -match 'dictate@dictate') {
     claude plugin uninstall dictate@dictate --scope user
     claude plugin marketplace remove dictate
 }
 
 # 4. Install the plugin from this folder (a local marketplace: edits here reach /reload-plugins).
 #    Done before the settings edits, so a failure here leaves settings untouched.
-claude plugin marketplace add $repo
-claude plugin install dictate-cli@dictate-cli --scope user
-if ($LASTEXITCODE -ne 0) { throw 'claude plugin install failed' }
+if (-not $SkipPlugin) {
+    claude plugin marketplace add $repo
+    claude plugin install dictate-cli@dictate-cli --scope user
+    if ($LASTEXITCODE -ne 0) { throw 'claude plugin install failed' }
+}
 
 $settings = Read-Json $settingsPath ([pscustomobject]@{})
 $keys = Read-Json $keysPath ([pscustomobject]@{})
@@ -178,4 +184,4 @@ elseif ($chat.bindings.PSObject.Properties['f9'] -and $chat.bindings.f9 -in 'com
 }
 Write-JsonAtomic $keys $keysPath 20
 
-Write-Host 'DictateCLI installed. Restart Claude Code: the microphone appears above the prompt.'
+Write-Host $(if ($SkipPlugin) { 'DictateCLI is set up. Restart Claude Code to use it.' } else { 'DictateCLI installed. Restart Claude Code: the microphone appears above the prompt.' })

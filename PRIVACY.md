@@ -10,6 +10,8 @@ DictateCLI runs no server and makes no network requests of its own.
   the Claude Code console and reads, read-only, whether that process is using the
   microphone (from the Windows per-app microphone record);
 - reads `~/.claude/keybindings.json` to show your shortcut;
+- on `/dictate setup` or `/dictate remove` only, runs its own install or uninstall script
+  locally, which changes or restores the Claude Code settings listed in `SECURITY.md`;
 - does not record or store audio, and does not store transcripts;
 - does not send telemetry or run analytics;
 - does not create an account or require credentials;
