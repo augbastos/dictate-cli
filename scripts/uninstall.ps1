@@ -51,6 +51,7 @@ if (Test-Path $keysPath) {
     if ($chat) {
         Restore $chat.bindings 'f9' $previous.f9 'command:dictate'
         Restore $chat.bindings 'f11' $previous.f11 'voice:pushToTalk'
+        Restore $chat.bindings 'alt+d' $previous.'alt+d' 'command:dictate'
         Restore $chat.bindings 'space' $previous.space $null
         $isEmpty = @($chat.bindings.PSObject.Properties).Count -eq 0
         if (-not $previous.chatBlock -and $isEmpty) {

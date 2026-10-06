@@ -6,9 +6,9 @@ DictateCLI adds clickable voice dictation to Claude Code's terminal UI using Cla
 Code's own (native) voice backend.
 
 ```
-                                             ╭──────────────────╮
-                                             │ 🎤  DictateCLI   │      idle
-                                             ╰──────────────────╯
+                                       ╭─────────────────────────╮
+                                       │ 🎤  DictateCLI   ALT+D  │      idle
+                                       ╰─────────────────────────╯
 ❯ investiga esse erro e
 
                          ╭───────────────────────────────────╮
@@ -28,9 +28,9 @@ Whatever you had typed stays: `investiga esse erro e` + spoken
 
 | You | DictateCLI |
 |---|---|
-| click 🎤 **DictateCLI** (or run `/dictate`) | keeps what you typed, clears the prompt, starts Claude Code voice |
+| click 🎤 **DictateCLI**, or **Alt+D** (or `/dictate`) | keeps what you typed, clears the prompt, starts Claude Code voice |
 | speak | Claude Code shows the live transcript in the prompt |
-| click 🎤 **Send** (or `/dictate` again) | stops; Claude Code transcribes; your text + the transcript is sent once |
+| click 🎤 **Send**, or **Alt+D** again | stops; Claude Code transcribes; your text + the transcript is sent once |
 | click × **Cancel**, or press **Esc** | discards the recording and puts back exactly what you had typed |
 | say nothing, then Send | nothing is sent; your text comes back |
 | type while it transcribes | auto-send stops; your draft goes back in front of what you typed |
@@ -40,10 +40,12 @@ Esc cancels.
 
 ### Keyboard
 
-`/dictate` toggles the same thing as the card. Mouse and keyboard drive one state
-machine, and the card always shows the state.
+**Alt+D** to start, **Alt+D** again to transcribe and send, **Esc** to cancel. Alt+D
+runs `/dictate` (keybinding `alt+d → command:dictate`), which toggles the same state
+machine as the card; mouse and keyboard mix freely and the card always shows the
+state. Holding Alt+D counts as one press.
 
-A one-key shortcut is limited by Claude Code itself:
+Why not a single key:
 
 - **Function keys (F9 and the rest) do not work.** Claude Code 2.1.289 and 2.1.290
   never route them to their keybindings. A function key bound to a command never
@@ -53,8 +55,9 @@ A one-key shortcut is limited by Claude Code itself:
   name for it. Supporting it would need a global Windows keyboard hook or remap, and
   DictateCLI never changes what a key does outside Claude Code.
 
-Any chord you bind to `command:dictate` in `~/.claude/keybindings.json` (context
-`Chat`) toggles DictateCLI, and the card shows it.
+Another chord can be bound by hand to `command:dictate` in
+`~/.claude/keybindings.json` (context `Chat`); the card shows whichever is bound.
+`install.ps1 -Shortcut disabled` binds none.
 
 ## What it is (and is not)
 
@@ -98,8 +101,9 @@ then:
 
 - sets `voice: { enabled: true, mode: "tap" }` and `tui: "fullscreen"` in settings
   (`-NoFullscreen` skips the renderer change);
-- in keybindings (context `Chat`): `f11 → voice:pushToTalk` and `space → null`, so
-  typing a space never starts a recording.
+- in keybindings (context `Chat`): `alt+d → command:dictate`,
+  `f11 → voice:pushToTalk`, and `space → null`, so typing a space never starts a
+  recording.
 
 New sessions show the card. A running session picks it up with `/reload-plugins`.
 
@@ -130,19 +134,20 @@ pwsh -NoProfile -File scripts\uninstall.ps1
 ```
 
 It uninstalls the plugin and its marketplace, and puts back the `voice`, `tui`,
-`f9`, `f11` and `space` values recorded before the first install. It leaves your
+`alt+d`, `f9`, `f11` and `space` values recorded before the first install. It leaves your
 `language` setting alone.
 
 ## Known limitations
 
-- **Esc before the first word.** An Esc pressed before any words show up cancels
-  Claude Code's recording, but DictateCLI cannot see that: the mod API exposes no
-  voice state. The card stays on REC until the next press. That press finds nothing
-  to send, gives your draft back, and never presses the voice key blind. Once words
-  show up, Esc is seen and the draft comes back at once.
+- **Esc before the first word.** An Esc pressed before any words show up does
+  cancel Claude Code's recording, but DictateCLI cannot see it: the mod API exposes
+  no voice state. The card stays on REC until your next press (which gives the draft
+  back) or for at most 16 s. Claude Code's voice stops by itself after 15 s of
+  silence, so after 16 s with no word the card goes idle and your draft comes back.
+  Once words show up, Esc is seen and the draft comes back at once.
 - A word spoken right before stopping has 1.5 s to show up as live text; DictateCLI
   sends nothing it has not seen.
-- No one-key shortcut (see Keyboard).
+- No single-key shortcut (see Keyboard); Alt+D is the default chord.
 
 ## Troubleshooting
 

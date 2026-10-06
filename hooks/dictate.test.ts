@@ -3,7 +3,7 @@ import type { Engine } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
 import { merge } from './merge'
-import { COMMAND, KEY_QUIET_MS, TRANSPORT_KEYS } from './register'
+import { COMMAND, KEY_QUIET_MS, NO_SPEECH_MS, TRANSPORT_KEYS } from './register'
 import { shortcutOf } from './shortcut'
 
 // A stand-in for Claude Code beneath the mod: the prompt box, the voice keybinding
@@ -387,6 +387,22 @@ describe('keyboard specifics', () => {
     await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true } as never)
     const ui = await mountBand($)
     expect(await ui.find({ text: 'ALT+D' })).toBeDefined()
+  })
+})
+
+describe('Esc before the first word', () => {
+  test('Claude Code cancels, DictateCLI cannot see it: the card goes idle and the draft comes back once the voice has surely stopped', async ($, on) => {
+    const { clock, state, esc } = fakeClaude($, on, { transcript: '' }, 'meu rascunho')
+    const ui = await mountBand($)
+    await ui.press({ key: 'mic' })
+    esc()
+    await clock.advance(NO_SPEECH_MS - 2000)
+    expect(await ui.find({ key: 'cancel' })).toBeDefined() // still unknown: Claude Code may be listening to silence
+    await clock.advance(3000)
+    expect(await ui.find({ key: 'cancel' })).toBeUndefined()
+    expect(state.box).toBe('meu rascunho')
+    expect(state.sent).toEqual([])
+    expect(state.keys).toEqual(['f11']) // nothing pressed blind
   })
 })
 

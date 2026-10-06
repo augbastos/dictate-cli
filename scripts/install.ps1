@@ -10,15 +10,16 @@
 .PARAMETER Beside
   Set DictateCLI's `beside` option: share the band row with another plugin's card (AFKSwitch).
 .PARAMETER Shortcut
-  Only `disabled` is accepted (no key bound). To use a chord, bind it by hand to
+  The key for /dictate: alt+d (default) or disabled. Other chords can be bound by hand to
   `command:dictate` in ~/.claude/keybindings.json (context Chat). Function keys are refused: Claude Code 2.1.289/2.1.290 never routes them to its keybindings (tested).
   The Application/Menu key is refused: Claude Code has no name for it. DictateCLI never
   installs a global keyboard hook.
 #>
-param([switch]$NoFullscreen, [switch]$Beside, [string]$Shortcut = 'disabled')
+param([switch]$NoFullscreen, [switch]$Beside, [string]$Shortcut = 'alt+d')
 $ErrorActionPreference = 'Stop'
 
 switch ($Shortcut.Trim().ToLowerInvariant()) {
+    'alt+d' { $userKey = 'alt+d' }
     'disabled' { $userKey = $null }
     { $_ -match '^(ctrl\+|shift\+|alt\+)*f([1-9]|1[0-2])$' } {
         throw "Function keys cannot be a DictateCLI shortcut: Claude Code never routes them to its keybindings (tested on 2.1.289 and 2.1.290). Nothing was changed."
@@ -26,7 +27,7 @@ switch ($Shortcut.Trim().ToLowerInvariant()) {
     { $_ -in 'apps', 'menu', 'application' } {
         throw 'The Application/Menu key cannot be a DictateCLI shortcut: Claude Code does not receive it from the terminal. Nothing was changed.'
     }
-    default { throw "Unknown shortcut '$Shortcut'. Use disabled (nothing was changed)." }
+    default { throw "Unknown shortcut '$Shortcut'. Use alt+d or disabled (nothing was changed)." }
 }
 # The helper presses F11 for Claude Code's voice (`voice:pushToTalk`); a user key, when
 # one is bound, runs /dictate (`command:dictate`). Never the same key: no loop.
@@ -97,6 +98,7 @@ if (-not (Test-Path $previousPath)) {
         chatBlock = [bool]$chat
         f9        = if ($chat) { Value-Of $chat.bindings 'f9' } else { @{ present = $false } }
         f11       = if ($chat) { Value-Of $chat.bindings 'f11' } else { @{ present = $false } }
+        'alt+d'   = if ($chat) { Value-Of $chat.bindings 'alt+d' } else { @{ present = $false } }
         space     = if ($chat) { Value-Of $chat.bindings 'space' } else { @{ present = $false } }
     }
     Write-JsonAtomic $previous $previousPath 10
@@ -104,6 +106,12 @@ if (-not (Test-Path $previousPath)) {
     # Upgrade from a version that did not record every key: record it now, while the
     # value in place is still the user's own (not one DictateCLI sets).
     $previous = Get-Content $previousPath -Raw | ConvertFrom-Json
+    if (-not $previous.PSObject.Properties['alt+d']) {
+        $altD = if ($chat) { Value-Of $chat.bindings 'alt+d' } else { @{ present = $false } }
+        if ($altD.present -and $altD.value -eq 'command:dictate') { $altD = @{ present = $false } }
+        $previous | Add-Member 'alt+d' ([pscustomobject]$altD)
+        Write-JsonAtomic $previous $previousPath 10
+    }
     if (-not $previous.PSObject.Properties['f11']) {
         $f11 = if ($chat) { Value-Of $chat.bindings 'f11' } else { @{ present = $false } }
         if ($f11.present -and $f11.value -eq 'voice:pushToTalk') { $f11 = @{ present = $false } }

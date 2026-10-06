@@ -37,6 +37,10 @@ const HEARD_MS = 1500
 // the transcript): it must stay empty this many looks, this far apart, to be a cancel.
 const CONFIRM_MS = 600
 const CONFIRM_LOOKS = 2
+// Claude Code's voice stops by itself after 15 s of silence. With no word for longer
+// than that, it is not recording any more (silence, or an Esc before the first word,
+// which DictateCLI cannot see): the card goes back to idle and the draft comes back.
+export const NO_SPEECH_MS = 16_000
 const KEY_GAP_MS = 150
 const ERROR_MS = 2500
 // A held key repeats; a press only counts after this long without one, which also
@@ -151,12 +155,14 @@ async function isCancelledNatively($: EngineInterface, id: number) {
 // live transcript vanish and gives the draft back.
 async function watchRecording($: EngineInterface, id: number) {
   let hasText = false
+  const since = await $.clock.now()
   while (run === id && phase === 'recording') {
     await $.clock.sleep(POLL_MS)
     if (run !== id || phase !== 'recording') return
     const { text } = await $.prompt.read()
     if (text !== '') hasText = true
     else if (hasText && (await isCancelledNatively($, id)) && phase === 'recording') return restore($)
+    else if (!hasText && (await $.clock.now()) - since > NO_SPEECH_MS && run === id && phase === 'recording') return restore($)
   }
 }
 
