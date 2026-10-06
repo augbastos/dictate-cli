@@ -391,7 +391,7 @@ describe('keyboard specifics', () => {
     on('session.start', (_, e) => ({ cwd: e.cwd }))
     await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true } as never)
     const ui = await mountBand($)
-    expect(await ui.find({ text: 'ALT+D' })).toBeDefined()
+    expect(await ui.find({ text: /Click or Alt\+D to dictate/ })).toBeDefined() // in the hover tip
   })
 })
 

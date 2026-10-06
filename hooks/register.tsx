@@ -24,6 +24,7 @@ export type TransportKey = 'f11' | 'escape'
 type Mic = 'on' | 'off' | 'unknown'
 export const TRANSPORT_KEYS: readonly TransportKey[] = ['f11', 'escape']
 export const COMMAND = 'dictate'
+const SETTINGS_PANE = 'dictate-cli-settings'
 
 const POLL_MS = 250
 // Under 3 words Claude Code inserts the transcript without sending it: once the
@@ -75,6 +76,11 @@ function show($: EngineInterface, next: Phase) {
   ticker?.cancel()
   ticker = next === 'recording' ? $.clock.every(1000, () => $.ui.invalidate('ui.render')) : undefined
   $.ui.invalidate('ui.render')
+}
+
+// `alt+d` → `Alt+D`
+export function chordLabel(chord: string) {
+  return chord.split('+').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('+')
 }
 
 function elapsed(now: number) {
@@ -341,7 +347,12 @@ export const register: Register = (on, options) => {
   })
 
   // The keyboard shortcut: a key bound to `command:dictate` runs /dictate.
-  on('command.run', { command: COMMAND }, async $ => {
+  on('command.run', { command: COMMAND }, async ($, e) => {
+    // `/dictate settings`: the only place DictateCLI explains itself at length.
+    if ((e.args ?? '').trim() === 'settings') {
+      await $.ui.open({ id: SETTINGS_PANE, title: 'DictateCLI', focus: true, closeOnEscape: true })
+      return {}
+    }
     const now = await $.clock.now()
     const isRepeat = now - lastKeyAt < KEY_QUIET_MS
     lastKeyAt = now
@@ -372,6 +383,27 @@ export const register: Register = (on, options) => {
     return { ...edited, text: prefix + edited.text, cursor: prefix.length + edited.cursor }
   })
 
+  on('ui.render', { component: 'Pane', requestId: SETTINGS_PANE }, async ($, e) => {
+    const { Box, Text } = $.ui.resolve(e)
+    const { language } = (await $.settings.read()) as { language?: unknown }
+    const key = shortcut === undefined ? 'none bound' : chordLabel(shortcut)
+    const voice = typeof language === 'string' && language !== '' ? language : 'Claude Code default (English)'
+    return (
+      <Box flexDirection="column" paddingX={1}>
+        <Text bold>DictateCLI</Text>
+        <Text dimColor>Voice dictation for Claude Code, on its native voice.</Text>
+        <Text> </Text>
+        <Text>{`Start / send   click the mic, or ${key} (also /dictate)`}</Text>
+        <Text>Cancel         Esc, or Cancel on the card</Text>
+        <Text>{`Language       ${voice}`}</Text>
+        <Text dimColor>               follows Claude Code's `language` setting (/config); it also sets the language Claude answers in</Text>
+        <Text dimColor>Options        /plugin → dictate-cli → configure (icon, beside)</Text>
+        <Text> </Text>
+        <Text dimColor>Esc closes this panel.</Text>
+      </Box>
+    )
+  })
+
   // A bordered card at the right of the band right above the prompt (no site draws
   // inside the prompt row), as present as AFKSwitch's switch. Whatever other plugins
   // draw in the band stays, to the left.
@@ -382,7 +414,8 @@ export const register: Register = (on, options) => {
     const icon = ICONS[options.icon === 'emoji' ? 'emoji' : 'nerd']
     const others = await next(e)
     const onToggle = () => detach($, toggle($))
-    const hint = shortcut === undefined ? '' : shortcut.toUpperCase()
+    const key = shortcut === undefined ? '' : ` or ${chordLabel(shortcut)}`
+    const cardWidth = (options.icon === 'emoji' ? 2 : 1) + 4 // glyph + padding + border
 
     const card = (
       <Box
@@ -393,16 +426,36 @@ export const register: Register = (on, options) => {
         borderDimColor={phase === 'idle'}
         paddingX={1}
       >
-        {phase === 'idle' && <Button key="mic" label={`${icon.mic}  DictateCLI`} plain onPress={onToggle} />}
-        {phase === 'idle' && hint !== '' && <Text dimColor>{`  ${hint}`}</Text>}
+        {phase === 'idle' && <Button key="mic" label={icon.mic} plain onPress={onToggle} />}
         {phase === 'recording' && <Text color="red">● {elapsed(Date.now())}   </Text>}
         {phase === 'recording' && <Button key="cancel" label={`${icon.cancel} Cancel`} plain dimColor onPress={() => detach($, cancel($))} />}
         {phase === 'recording' && <Text>   </Text>}
         {phase === 'recording' && <Button key="mic" label={`${icon.mic}  Send`} plain onPress={onToggle} />}
-        {phase === 'transcribing' && <Text dimColor>{icon.mic}  Transcribing…   </Text>}
-        {phase === 'transcribing' && <Button key="cancel" label={`${icon.cancel} Cancel`} plain dimColor onPress={() => detach($, cancel($))} />}
+        {phase === 'transcribing' && <Text dimColor>Transcribing…  </Text>}
+        {phase === 'transcribing' && <Button key="cancel" label={icon.cancel} plain dimColor onPress={() => detach($, cancel($))} />}
         {phase === 'error' && <Text color="red">{message}   </Text>}
-        {phase === 'error' && <Button key="mic" label={`${icon.mic}  DictateCLI`} plain onPress={onToggle} />}
+        {phase === 'error' && <Button key="mic" label={icon.mic} plain onPress={onToggle} />}
+      </Box>
+    )
+
+    // Idle shows the mic alone; name, shortcut and help appear while the pointer is on
+    // it (a hover reveal, painted to its left over the band's empty space).
+    const control = phase !== 'idle' ? card : (
+      <Box key="dictate-cli" flexDirection="row" flexShrink={0}>
+        <Box
+          position="absolute"
+          top={0}
+          right={cardWidth + 1}
+          flexDirection="column"
+          alignItems="flex-end"
+          display="none"
+          hover={{ display: 'flex' }}
+        >
+          <Text bold>DictateCLI</Text>
+          <Text dimColor>{`Click${key} to dictate · Esc cancels`}</Text>
+          <Text dimColor>/dictate settings</Text>
+        </Box>
+        {card}
       </Box>
     )
 
@@ -413,7 +466,7 @@ export const register: Register = (on, options) => {
         <Box flexDirection="row" alignItems="flex-end">
           {others}
           <Box flexGrow={1} />
-          {card}
+          {control}
         </Box>
       )
     }
@@ -425,7 +478,7 @@ export const register: Register = (on, options) => {
     if (options.beside === true) {
       return (
         <Box flexDirection="row" justifyContent="flex-end" marginBottom={-3}>
-          {card}
+          {control}
         </Box>
       )
     }
@@ -434,7 +487,7 @@ export const register: Register = (on, options) => {
       <Box flexDirection="column">
         {others}
         <Box flexDirection="row" justifyContent="flex-end">
-          {card}
+          {control}
         </Box>
       </Box>
     )

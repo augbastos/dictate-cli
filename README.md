@@ -6,13 +6,17 @@ DictateCLI adds clickable voice dictation to Claude Code's terminal UI using Cla
 Code's own (native) voice backend.
 
 ```
-                                       ╭─────────────────────────╮
-                                       │ 🎤  DictateCLI   ALT+D  │      idle
-                                       ╰─────────────────────────╯
+                                                        ╭───╮
+                                                        │ 🎙 │      idle: just the mic
+                                                        ╰───╯
 ❯ investiga esse erro e
 
+               DictateCLI ╭───╮
+  Click or Alt+D to dictate · Esc cancels │ 🎙 │      pointer on it: the tip
+               /dictate settings ╰───╯
+
                          ╭───────────────────────────────────╮
-                         │ ● 0:07    × Cancel    🎤  Send     │      recording
+                         │ ● 0:07    × Cancel    🎙  Send     │      recording
                          ╰───────────────────────────────────╯
 ❯
 ```
@@ -84,9 +88,8 @@ telemetry and no background process.
 - A claude.ai login (voice dictation is not available with an API key, Bedrock,
   Vertex or Foundry) and a working microphone.
 - The fullscreen renderer for mouse clicks (`install.ps1` turns it on).
-- For Portuguese (or any non-English) dictation, set Claude Code's `language`
-  setting (e.g. `"language": "portuguese"`). Claude Code's voice uses it, English
-  otherwise. It also sets the language Claude answers in.
+- Dictation follows Claude Code's own `language` setting (see Settings and
+  language).
 
 ## Install
 
@@ -107,6 +110,16 @@ then:
   recording.
 
 New sessions show the card. A running session picks it up with `/reload-plugins`.
+
+## Settings and language
+
+`/dictate settings` opens a small panel (Esc closes it): how to start, send and
+cancel, the shortcut, the dictation language and where options live.
+
+DictateCLI has no language setting of its own: it uses Claude Code's voice, which
+transcribes in Claude Code's `language` setting (`/config`, or `"language"` in
+`~/.claude/settings.json`; English when unset). That setting also sets the language
+Claude answers in. `install.ps1` never touches it.
 
 ## Options
 
@@ -159,7 +172,8 @@ It uninstalls the plugin and its marketplace, and puts back the `voice`, `tui`,
   `bin/dictate-key.exe`.
 - **REC shows but no text appears.** Check the microphone permission in Windows
   Settings → Privacy → Microphone, and that `/voice` works on its own.
-- **Portuguese comes out as English words.** Set `"language": "portuguese"` in
+- **Your language comes out as English words.** Set Claude Code's `language`
+  setting (e.g. `"language": "portuguese"`) in `/config` or
   `~/.claude/settings.json`.
 
 ## License
