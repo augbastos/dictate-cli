@@ -10,8 +10,8 @@
 .PARAMETER Beside
   Set DictateCLI's `beside` option: share the band row with another plugin's card (AFKSwitch).
 .PARAMETER Shortcut
-  A key for /dictate: disabled (default: none bound). F9 and the other function keys
-  are refused: Claude Code 2.1.289/2.1.290 never routes them to its keybindings (tested).
+  Only `disabled` is accepted (no key bound). To use a chord, bind it by hand to
+  `command:dictate` in ~/.claude/keybindings.json (context Chat). Function keys are refused: Claude Code 2.1.289/2.1.290 never routes them to its keybindings (tested).
   The Application/Menu key is refused: Claude Code has no name for it. DictateCLI never
   installs a global keyboard hook.
 #>
@@ -68,7 +68,18 @@ New-Item -ItemType Directory -Force (Join-Path $repo 'bin') | Out-Null
 & $csc -nologo -optimize "-out:$(Join-Path $repo 'bin\dictate-key.exe')" (Join-Path $repo 'helper\dictate-key.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Building the helper failed' }
 
-# 3. Install the plugin from this folder (a local marketplace: edits here reach /reload-plugins).
+# 3. Migrate an install of the former name (Dictate, `dictate@dictate`): its recorded
+#    pre-install values carry over, its options move to the new id, and it is removed so
+#    two copies never both register /dictate and draw a card.
+$oldPrevious = Join-Path $backups 'dictate-previous.json'
+if ((Test-Path $oldPrevious) -and -not (Test-Path $previousPath)) { Move-Item $oldPrevious $previousPath }
+$oldOptions = (Read-Json $settingsPath ([pscustomobject]@{})).pluginConfigs.'dictate@dictate'.options
+if ((claude plugin list 2>&1 | Out-String) -match 'dictate@dictate') {
+    claude plugin uninstall dictate@dictate --scope user
+    claude plugin marketplace remove dictate
+}
+
+# 4. Install the plugin from this folder (a local marketplace: edits here reach /reload-plugins).
 #    Done before the settings edits, so a failure here leaves settings untouched.
 claude plugin marketplace add $repo
 claude plugin install dictate-cli@dictate-cli --scope user
@@ -101,9 +112,20 @@ if (-not (Test-Path $previousPath)) {
     }
 }
 
-# 4. settings.json: voice on, tap mode; fullscreen renderer unless -NoFullscreen.
+# 5. settings.json: voice on, tap mode; fullscreen renderer unless -NoFullscreen.
 $settings | Add-Member -Force voice ([pscustomobject]@{ enabled = $true; mode = 'tap' })
 if (-not $NoFullscreen) { $settings | Add-Member -Force tui 'fullscreen' }
+if ($oldOptions) {
+    # The former install's options (icon, beside) under the new id; new values win.
+    if (-not $settings.PSObject.Properties['pluginConfigs']) { $settings | Add-Member pluginConfigs ([pscustomobject]@{}) }
+    $entry = $settings.pluginConfigs.PSObject.Properties['dictate-cli@dictate-cli']?.Value
+    if (-not $entry) { $entry = [pscustomobject]@{}; $settings.pluginConfigs | Add-Member 'dictate-cli@dictate-cli' $entry }
+    if (-not $entry.PSObject.Properties['options']) { $entry | Add-Member options ([pscustomobject]@{}) }
+    foreach ($option in $oldOptions.PSObject.Properties) {
+        if (-not $entry.options.PSObject.Properties[$option.Name]) { $entry.options | Add-Member $option.Name $option.Value }
+    }
+}
+if ($settings.PSObject.Properties['pluginConfigs']) { $settings.pluginConfigs.PSObject.Properties.Remove('dictate@dictate') }
 if ($Beside) {
     # Merge: keep any other DictateCLI option the user set (icon).
     if (-not $settings.PSObject.Properties['pluginConfigs']) { $settings | Add-Member pluginConfigs ([pscustomobject]@{}) }
@@ -114,7 +136,7 @@ if ($Beside) {
 }
 Write-JsonAtomic $settings $settingsPath 100
 
-# 5. keybindings.json: the user's key runs /dictate, F11 is Claude Code's voice key
+# 6. keybindings.json: the user's key runs /dictate, F11 is Claude Code's voice key
 #    (pressed only by the helper), Space no longer starts dictation.
 if (-not $chat) {
     $chat = [pscustomobject]@{ context = 'Chat'; bindings = [pscustomobject]@{} }

@@ -108,8 +108,9 @@ function withDraft(typed: string) {
 // returns to the prompt through the official prompt API, with no key injected.
 async function releaseKeyboard($: EngineInterface) {
   const { text } = await $.prompt.read()
-  await $.prompt.fill({ text: `${text} ` })
-  await $.prompt.fill({ text })
+  if (!(await $.prompt.fill({ text: `${text} ` })).isFilled) return false
+  if ((await $.prompt.fill({ text })).isFilled) return true
+  return (await $.prompt.fill({ text })).isFilled // one retry: never leave the extra space
 }
 
 async function restore($: EngineInterface) {
@@ -178,7 +179,11 @@ async function startRecording($: EngineInterface) {
   if (base !== '' && !(await $.prompt.fill({ text: '' })).isFilled) {
     return fail($, 'the prompt is busy')
   }
-  if (base === '') await releaseKeyboard($) // a non-empty draft just changed already
+  // A non-empty draft just changed already. The prompt must be empty again: tap mode
+  // starts only on an empty prompt.
+  if (base === '' && !(await releaseKeyboard($)) && (await $.prompt.read()).text !== '') {
+    return fail($, 'the prompt is busy')
+  }
   if (!(await press($, 'f11'))) {
     return fail($, 'could not reach Claude Code voice; run scripts/install.ps1')
   }
@@ -237,7 +242,9 @@ async function cancel($: EngineInterface) {
   await releaseKeyboard($) // a click on Cancel put the keyboard in the band: Esc must reach the voice
   const isCancelled = !isWorking || isListening ? await press($, 'escape') : false
   await $.clock.sleep(KEY_GAP_MS)
-  await $.prompt.fill({ text: withDraft((await $.prompt.read()).text) })
+  // While recording the prompt holds only Claude Code's live transcript, which a cancel
+  // discards: the prompt gets back exactly the draft, never a piece of the transcript.
+  await $.prompt.fill({ text: base })
   if (!isCancelled) $.ui.toast('DictateCLI: press Esc if Claude Code is still recording')
 }
 
