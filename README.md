@@ -125,8 +125,8 @@ Claude Code's own: the audio is streamed to Anthropic for transcription and is n
 processed locally (see Claude Code's voice dictation and data usage docs).
 
 The helper writes exactly one key press (F11 or Esc) into the console of the Claude
-Code process that started it. It accepts no other input, so nothing you say can
-become a command.
+Code process that started it, or reads (read-only) whether that process is using the
+microphone. It accepts no other input, so nothing you say can become a command.
 
 ## Uninstall
 
@@ -140,12 +140,13 @@ It uninstalls the plugin and its marketplace, and puts back the `voice`, `tui`,
 
 ## Known limitations
 
-- **Esc before the first word.** An Esc pressed before any words show up does
-  cancel Claude Code's recording, but DictateCLI cannot see it: the mod API exposes
-  no voice state. The card stays on REC until your next press (which gives the draft
-  back) or for at most 16 s. Claude Code's voice stops by itself after 15 s of
-  silence, so after 16 s with no word the card goes idle and your draft comes back.
-  Once words show up, Esc is seen and the draft comes back at once.
+- **Esc and the card.** Claude Code's voice takes Esc itself, and the mod API
+  exposes no voice state. So DictateCLI watches two things: the live transcript
+  vanishing, and Windows' own record of which app is using the microphone (the one
+  behind the tray mic icon), which the helper reads for its Claude Code process.
+  Esc closes the card in a fraction of a second either way. If that record is
+  unavailable, the card falls back to closing after 16 s without a word (Claude
+  Code's voice stops by itself after 15 s of silence).
 - A word spoken right before stopping has 1.5 s to show up as live text; DictateCLI
   sends nothing it has not seen.
 - No single-key shortcut (see Keyboard); Alt+D is the default chord.
