@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2
+
+- The idle mic card is square instead of a thin column, and a click anywhere inside it
+  starts dictation, not only on the glyph.
+
 ## 0.4.1
 
 - Passes the Claude plugin directory's checks: simpler code paths the directory's checker
