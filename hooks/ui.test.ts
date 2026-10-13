@@ -53,7 +53,7 @@ const mountBand = ($: Engine) =>
 test('idle: only the mic is visible; name and help wait in a hover tip', async ($, on) => {
   fake($, on)
   const ui = await mountBand($)
-  expect(visible(await ui.drawn()).join('')).toBe(MIC)
+  expect(visible(await ui.drawn()).join('').trim()).toBe(MIC)
   expect(await ui.find({ text: 'DictateCLI' })).toBeDefined() // present, hidden until hover
   expect(await ui.find({ text: '/dictate settings' })).toBeDefined()
 })

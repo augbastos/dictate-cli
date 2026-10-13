@@ -483,7 +483,10 @@ export const register: Register = (on, options) => {
     const others = await next(e)
     const onToggle = () => detach($, toggle($))
     const key = shortcut === undefined ? '' : ` or ${chordLabel(shortcut)}`
-    const cardWidth = (options.icon === 'emoji' ? 2 : 1) + 4 // glyph + padding + border
+    // Idle is a square: a terminal cell is about twice as tall as wide, so 3 rows need
+    // ~7 columns. The padding lives in the button's label, so a click anywhere inside
+    // the border presses it (a Box takes no clicks).
+    const cardWidth = (options.icon === 'emoji' ? 2 : 1) + 6 // glyph + 2×2 label spaces + border
 
     const card = (
       <Box
@@ -492,9 +495,9 @@ export const register: Register = (on, options) => {
         borderStyle="round"
         borderColor={phase === 'recording' || phase === 'error' ? 'red' : undefined}
         borderDimColor={phase === 'idle'}
-        paddingX={1}
+        paddingX={phase === 'idle' ? 0 : 1}
       >
-        {phase === 'idle' && <Button key="mic" label={icon.mic} plain onPress={onToggle} />}
+        {phase === 'idle' && <Button key="mic" label={`  ${icon.mic}  `} plain onPress={onToggle} />}
         {phase === 'recording' && <Text color="red">● {elapsed(Date.now())}   </Text>}
         {phase === 'recording' && <Button key="cancel" label={`${icon.cancel} Cancel`} plain dimColor onPress={() => detach($, cancel($))} />}
         {phase === 'recording' && <Text>   </Text>}
