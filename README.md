@@ -14,6 +14,9 @@ Windows · Claude native voice · No extra API key · MIT
 
 ## Install
 
+The installer enables Claude Code's fullscreen mode so the microphone button can
+receive clicks. [Uninstall](#uninstall) restores your previous renderer setting.
+
 ```powershell
 git clone https://github.com/augbastos/dictate-cli
 cd dictate-cli
