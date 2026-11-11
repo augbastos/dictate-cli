@@ -68,7 +68,7 @@ instead, then restart Claude Code; run it again after each plugin update.
   `/dictate` still works).
 - **Plugin options.** `icon` is `nerd` (default, needs a Nerd Font) or `emoji`. `beside`
   is the same as `-Beside`.
-- **Settings page.** `/dictate settings` opens the DictateCLI settings page inside Claude Code.
+- **Settings page.** `/dictate settings` opens a panel that shows the current shortcut and voice language and where to change each.
 
 ## What it runs and sends
 
