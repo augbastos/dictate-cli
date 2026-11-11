@@ -1,16 +1,36 @@
 # DictateCLI
 
+![CI](https://github.com/augbastos/dictate-cli/actions/workflows/ci.yml/badge.svg)
+![Licence: MIT](https://img.shields.io/github/license/augbastos/dictate-cli)
+![Latest tag](https://img.shields.io/github/v/tag/augbastos/dictate-cli)
+
 > Speak to Claude Code instead of typing.
 
 DictateCLI adds a microphone button to Claude Code, using Claude Code's own native
-voice dictation.
+voice dictation. Click, speak, send.
 
 ![DictateCLI: click the mic, speak, click Send, and Claude gets the prompt](docs/demo.gif)
 <sub>Simulated animation of the flow, not a screen recording.</sub>
 
-**Click. Speak. Send.**
+## What it does
 
-Windows · Claude native voice · No extra API key · MIT
+- Adds a microphone button above the prompt. It drives Claude Code's built-in voice dictation.
+- Anything you were typing before dictation stays safe and comes back afterward.
+- No extra speech service, no extra API key, no audio stored by DictateCLI, no background
+  process while idle.
+- Follows Claude Code's voice language setting. Change it in `/config` if needed.
+
+It is a small Claude Code plugin with a helper program built on your machine. It has no
+speech engine of its own. See [docs/architecture.md](docs/architecture.md).
+
+## Requirements
+
+- Windows. macOS and Linux are not supported in this release.
+- Claude Code 2.1.287 or newer, with voice dictation, and a microphone.
+- [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows).
+
+The installer checks these first and changes nothing if one is missing.
+`pwsh -File scripts\doctor.ps1` tells you if anything is off.
 
 ## Install
 
@@ -29,36 +49,26 @@ Installed the plugin another way, for example with `/plugin`? Run `/dictate setu
 instead, then restart Claude Code; run it again after each plugin update.
 `/dictate remove` undoes it.
 
-Requires Claude Code (2.1.287+) with voice dictation, a microphone and
-[PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows).
-The installer checks these first and changes nothing if one is missing.
-`pwsh -File scripts\doctor.ps1` tells you if anything is off.
-
 ## Use
 
 | Action | What it does |
 |---|---|
-| Click 🎙 | Start dictating |
+| Click the mic button | Start dictating |
 | **Send** | Transcribe and send |
 | **Cancel** / Esc | Discard the recording |
 | Alt+D | Start / send from the keyboard |
 
-Anything you were typing before dictation stays safe and comes back afterward.
+## Configuration
 
-## Why DictateCLI?
-
-Claude Code already has voice dictation. DictateCLI does not replace it; it gives it
-a simple microphone button.
-
-- No extra speech service
-- No extra API key
-- No audio stored by DictateCLI
-- No background process while idle
-
-## Language
-
-DictateCLI follows Claude Code's voice language setting. Change it in `/config` if
-needed.
+- **Shortcut.** The installer takes `-Shortcut alt+d` (default) or `-Shortcut disabled`.
+  Other chords can be bound to `command:dictate` in `~/.claude/keybindings.json`
+  (context `Chat`). Function keys are refused.
+- **Installer switches.** `-Beside` shares the row above the prompt with another plugin's
+  card. `-NoFullscreen` leaves the renderer alone (the button is then not clickable;
+  `/dictate` still works).
+- **Plugin options.** `icon` is `nerd` (default, needs a Nerd Font) or `emoji`. `beside`
+  is the same as `-Beside`.
+- **Settings page.** `/dictate settings` opens a panel that shows the current shortcut and voice language and where to change each.
 
 ## What it runs and sends
 
@@ -78,12 +88,9 @@ dictation, which sends the audio to Anthropic. Details: [PRIVACY.md](PRIVACY.md)
 
 ## Compatibility
 
-Tested on **Windows 11 x64**, with Claude Code in the VS Code integrated terminal.
-Windows 10 x64 is expected to work but not yet tested.
-Other terminals, such as Windows Terminal, are not yet tested.
-
-macOS and Linux are not supported in this release. Details:
-[docs/compatibility.md](docs/compatibility.md)
+Tested on Windows, with Claude Code in the VS Code integrated terminal. Other terminals,
+such as Windows Terminal, are not yet tested. macOS and Linux are not supported in this
+release. Details: [docs/compatibility.md](docs/compatibility.md)
 
 <details>
 <summary><strong>Troubleshooting</strong></summary>
@@ -106,11 +113,27 @@ macOS and Linux are not supported in this release. Details:
 pwsh -File scripts\uninstall.ps1
 ```
 
-## How it works
+## Layout
 
-DictateCLI is a small Claude Code plugin that adds the microphone button and
-controls Claude Code's existing voice dictation. It has no speech engine of its own.
-See [docs/architecture.md](docs/architecture.md).
+| Path | What it is |
+|---|---|
+| `hooks/` | The plugin code (TypeScript) and its tests |
+| `helper/` | The small Windows key helper, built locally into `bin/` |
+| `scripts/` | Install, uninstall and doctor scripts |
+| `tests/` | Installer tests (PowerShell) |
+| `docs/` | Architecture, compatibility and the demo animation |
+| `.claude-plugin/` | Plugin manifest and marketplace entry |
+
+## Tests and CI
+
+CI builds the helper, validates the plugin with `claude plugin validate .`, runs
+`claude plugin test .`, and runs the installer tests in `tests/`. See
+[.github/workflows/ci.yml](.github/workflows/ci.yml).
+
+## More
+
+[Architecture](docs/architecture.md) · [Changelog](CHANGELOG.md) · [Support](SUPPORT.md) ·
+[Security](SECURITY.md) · [Terms](TERMS.md) · [Privacy](PRIVACY.md)
 
 ## License
 
