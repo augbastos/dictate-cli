@@ -65,3 +65,22 @@ jobs:
       - name: Build output stays untracked
         shell: pwsh
         run: if (git status --porcelain) { git status; throw 'working tree changed' }
+
+  ci-ok:
+    # The one check the branch ruleset requires from this workflow. Matrix job
+    # names change when a version is added or dropped, and a required check
+    # that no longer exists blocks every pull request; this name never changes.
+    name: ci-ok
+    if: always()
+    needs: [public-safe, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Every job passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for result in $RESULTS; do
+            [ "$result" = "success" ] || exit 1
+          done
