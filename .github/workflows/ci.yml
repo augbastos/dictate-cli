@@ -10,13 +10,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   public-safe:
     name: Public-safe tree
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: No personal paths, private references or secrets in tracked files
@@ -32,8 +33,14 @@ jobs:
   windows:
     name: Windows
     runs-on: windows-latest
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: .github/ci/package-lock.json
       - name: Build the helper with the C# compiler included in Windows
         shell: pwsh
         run: |
@@ -51,17 +58,16 @@ jobs:
           if ($LASTEXITCODE -notin 10, 11, 12) { throw "mic query exit $LASTEXITCODE" }
           exit 0 # the checks above passed; the helper's own exit code is not the step's
       - name: Install Claude Code
-        run: npm install -g @anthropic-ai/claude-code
+        shell: pwsh
+        run: |
+          npm ci --prefix .github/ci --prefer-offline --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { throw 'Claude Code install failed' }
+          Join-Path $PWD '.github/ci/node_modules/.bin' | Out-File -Append $env:GITHUB_PATH
       - name: Plugin manifest and module validate
         run: claude plugin validate .
-      - name: Plugin tests
-        run: claude plugin test .
-      - name: Installer preflight refuses an old Claude Code and changes nothing
+      - name: Plugin and installer tests
         shell: pwsh
-        run: ./tests/preflight.ps1
-      - name: Install, uninstall and restore leave the user's config as it was
-        shell: pwsh
-        run: ./tests/install-rollback.ps1
+        run: ./tests/ci.ps1
       - name: Build output stays untracked
         shell: pwsh
         run: if (git status --porcelain) { git status; throw 'working tree changed' }
