@@ -130,6 +130,13 @@ CI builds the helper, validates the plugin with `claude plugin validate .`, runs
 `claude plugin test .`, and runs the installer tests in `tests/`. See
 [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
+CI installs a pinned Claude Code version from `.github/ci/package-lock.json`, using
+the official Node setup action's npm cache. After validation, plugin tests and the
+two installer test modules run in separate processes, on up to three CPU cores.
+Run `pwsh -NoProfile -File tests/ci.ps1` on Windows to run the same tests with an
+installed Claude Code. The `Public-safe tree`, `Windows`, `ci-ok`, and `safety`
+checks keep their existing names.
+
 ## More
 
 [Architecture](docs/architecture.md) · [Changelog](CHANGELOG.md) · [Support](SUPPORT.md) ·
