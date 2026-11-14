@@ -129,13 +129,17 @@ pwsh -File scripts\uninstall.ps1
 CI builds the helper, validates the plugin with `claude plugin validate .`, runs
 `claude plugin test .`, and runs the installer tests in `tests/`. See
 [.github/workflows/ci.yml](.github/workflows/ci.yml).
+The offline workflow contract runs first; run it alone with
+`pwsh -NoProfile -File tests/ci-workflow.ps1` (Git Bash and jq required).
 
 CI installs a pinned Claude Code version from `.github/ci/package-lock.json`, using
 the official Node setup action's npm cache. After validation, plugin tests and the
 two installer test modules run in separate processes, on up to three CPU cores.
 Run `pwsh -NoProfile -File tests/ci.ps1` on Windows to run the same tests with an
-installed Claude Code. The `Public-safe tree`, `Windows`, `ci-ok`, and `safety`
-checks keep their existing names.
+installed Claude Code. CI reports `Safety`, `Lint`, `Test (Windows)`, and `CI passed`.
+The required checks are `Safety` and `CI passed`. `Safety` runs on pull requests
+using the base revision's policy; `CI passed` requires every job to succeed,
+allowing only `Safety` to be skipped outside pull requests.
 
 ## More
 
