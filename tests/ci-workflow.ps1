@@ -57,7 +57,7 @@ foreach ($event in 'pull_request', 'push', 'workflow_dispatch') {
         foreach ($lint in 'success', 'failure', 'skipped', 'cancelled') {
             foreach ($test in 'success', 'failure', 'skipped', 'cancelled') {
                 $needs = @{ safety = @{ result = $s }; 'public-safe' = @{ result = $lint }; windows = @{ result = $test } } | ConvertTo-Json -Compress
-                $expected = if ($lint -eq 'success' -and $test -eq 'success' -and ($s -eq 'success' -or ($s -eq 'skipped' -and $event -ne 'pull_request'))) { 0 } else { 1 }
+                $expected = if ($lint -eq 'success' -and $test -eq 'success' -and ($s -eq 'success' -or ($s -eq 'skipped' -and $event -eq 'push'))) { 0 } else { 1 }
                 $commands.Add("EVENT_NAME='$event' NEEDS_JSON='$needs' gate >/dev/null 2>&1")
                 $commands.Add('[ "$?" -eq ' + $expected + ' ] || exit 99')
             }
