@@ -15,7 +15,8 @@ voice dictation. Click, speak, send.
 ## What it does
 
 - Adds a microphone button above the prompt. It drives Claude Code's built-in voice dictation.
-- Anything you were typing before dictation stays safe and comes back afterward.
+- Anything you were typing before dictation is set aside and put back afterward, if the
+  prompt is empty by then.
 - No extra speech service, no extra API key, no audio stored by DictateCLI, no background
   process while idle.
 - Follows Claude Code's voice language setting. Change it in `/config` if needed.
@@ -72,19 +73,49 @@ instead, then restart Claude Code; run it again after each plugin update.
 
 ## What it runs and sends
 
-- **Programs:** its own helper, `bin\dictate-key.exe` (built from `helper/dictate-key.cs`
-  on your machine), to press Claude Code's voice key and read whether Claude Code is using
-  the microphone. On `/dictate setup` or `/dictate remove` only, PowerShell 7 runs the
-  bundled install or uninstall script.
-- **Prompts:** it submits only what Claude Code's voice dictation transcribed, then puts
-  your unsent draft back in the prompt. It reads the prompt only to do that.
-- **Network:** none of its own. See [SECURITY.md](SECURITY.md) for every file it changes.
+- **Programs.** The plugin itself starts two:
+  - Its own helper, `bin\dictate-key.exe` (built from `helper/dictate-key.cs` on your
+    machine), with one of three fixed words and no text of yours. `f11` and `escape`
+    press that key in Claude Code's own console, to start, stop or cancel Claude Code's
+    voice dictation. `mic` looks up the process that started it (Claude Code) and reads
+    Windows' record of that app's microphone use. It runs only while you dictate.
+  - PowerShell 7 (`%ProgramFiles%\PowerShell\7\pwsh.exe`), only when you type
+    `/dictate setup` or `/dictate remove`, to run the bundled install or uninstall
+    script. Setup reads `settings.json` and `keybindings.json` in your Claude Code
+    folder, copies them to its `backups` folder, edits them, and runs `claude --version`
+    and the C# compiler that ships with Windows (`csc.exe`) to build the helper. Remove
+    puts the earlier values back. [SECURITY.md](SECURITY.md) lists the changes.
+- **What it reads.** The prompt box while you dictate (your unsent draft, then the live
+  transcript), `~/.claude/keybindings.json` to show your shortcut, and Claude Code's
+  settings, from which it uses one field, the voice `language`. It also reads environment
+  variables that hold folder paths (`ProgramFiles`, `USERPROFILE`, `HOME`; the setup
+  script also `CLAUDE_CONFIG_DIR` and `WINDIR`). Your draft is kept in memory only, never
+  written to disk. It does not read your conversation history, and it never uses or sends a
+  password, token or API key. It declares no MCP server.
+- **What it sends.** Only a prompt, through Claude Code's own prompt-submit call: the
+  text goes where your prompts go, and DictateCLI contacts no server itself. The text is
+  what is in the prompt box when the dictation ends: Claude Code's transcript, plus
+  anything you typed into the box meanwhile. Claude Code sends longer transcripts itself
+  and DictateCLI lets that send through unchanged; it submits the short ones. Your unsent
+  draft is set aside first and is not in what DictateCLI submits. It is put back afterward
+  if the prompt box is empty by then.
+- **Hooks.** `session.start` registers the `/dictate` command and reads your shortcut.
+  `command.run` is handled for `/dictate` only (start or send a dictation;
+  `/dictate settings`, `/dictate setup`, `/dictate remove`), and DictateCLI does not
+  intercept or run any other slash command. `prompt.submit` and `prompt.edit` act only
+  while a dictation is running: the send goes through unchanged, and if you type while
+  Claude Code transcribes, DictateCLI stops its own automatic send and puts your draft
+  back in front of what you typed. `ui.render` draws the microphone button and the
+  settings panel, and reads whether a turn is running and whether a survey is showing.
+  More in [docs/architecture.md](docs/architecture.md).
+- **Network.** None of its own.
 
 ## Privacy
 
-DictateCLI itself records nothing, stores nothing, opens no network connection and adds
-no telemetry. Your voice is captured and transcribed by Claude Code's built-in voice
-dictation, which sends the audio to Anthropic. Details: [PRIVACY.md](PRIVACY.md).
+DictateCLI itself records no audio, stores no audio or transcripts, opens no network
+connection and adds no telemetry. Your voice is captured and transcribed by Claude Code's
+built-in voice dictation, which sends the audio to Anthropic. Details:
+[PRIVACY.md](PRIVACY.md).
 
 ## Compatibility
 
