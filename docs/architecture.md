@@ -27,7 +27,8 @@ keyboard.
   Code's tap mode starts only on an empty prompt. Then the voice key is pressed.
 - **Stop:** the voice key is pressed again. Claude Code sends a transcript of three
   words or more by itself; DictateCLI sends shorter ones once they stop changing
-  (1.5 s). Exactly one prompt is sent. The draft comes back afterwards.
+  (1.5 s). Exactly one prompt is sent. The draft comes back afterwards if the prompt is
+  empty by then.
 - **Cancel:** Esc is Claude Code's own voice cancel. DictateCLI sees it in two ways:
   the live transcript disappears, or Windows reports that Claude Code released the
   microphone. Either way the draft comes back and nothing is sent.

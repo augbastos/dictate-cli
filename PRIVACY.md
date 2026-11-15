@@ -6,10 +6,12 @@ DictateCLI runs no server and makes no network requests of its own.
 
 - draws a microphone button in Claude Code and fills or sends the prompt through Claude
   Code's own prompt API;
-- runs its local helper, `bin/dictate-key.exe`, which presses Claude Code's voice key in
-  the Claude Code console and reads, read-only, whether that process is using the
-  microphone (from the Windows per-app microphone record);
-- reads `~/.claude/keybindings.json` to show your shortcut;
+- runs its local helper, `bin/dictate-key.exe`, which presses F11 or Escape (Claude
+  Code's voice keys) in the Claude Code console and reads, read-only, whether that
+  process is using the microphone (from the Windows per-app microphone record);
+- reads the prompt box while you dictate (your unsent draft, then the live transcript),
+  `~/.claude/keybindings.json` to show your shortcut, and Claude Code's settings to show
+  the voice `language`;
 - on `/dictate setup` or `/dictate remove` only, runs its own install or uninstall script
   locally, which changes or restores the Claude Code settings listed in `SECURITY.md`;
 - does not record or store audio, and does not store transcripts;
