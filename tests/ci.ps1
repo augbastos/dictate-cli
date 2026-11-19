@@ -2,6 +2,8 @@
 # Each installer test runs in its own process and throwaway configuration. Only
 # rollback builds the helper; plugin tests mock processes and use virtual clocks.
 $ErrorActionPreference = 'Stop'
+& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'ci-workflow.ps1')
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $results = @('plugin', 'preflight', 'install-rollback') | ForEach-Object -Parallel {
     $ErrorActionPreference = 'Stop'
     $timer = [Diagnostics.Stopwatch]::StartNew()

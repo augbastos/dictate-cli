@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- README, PRIVACY and SECURITY say more precisely what DictateCLI runs, reads and sends;
+  the README also lists what each hook does. No code change.
+
 ## 0.4.2
 
 - The idle mic card is square instead of a thin column, and a click anywhere inside it
